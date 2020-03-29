@@ -1,8 +1,10 @@
 import discord
+from discord.utils import get
 import sqlite3
 import turnips
 
 queue = []
+queue_interval = 5
 
 class Command:
     Successful = 0
@@ -48,6 +50,15 @@ class Lloid(discord.Client):
         await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
+        self.queue = turnips.Queue(self.market)
+        self.associated_user = {} # message id -> id of the user the message is about
+
+    async def on_reaction_add(self, reaction, user):
+        print ("reacted")
+        print (reaction.message.id, self.associated_user)
+        if reaction.message.id in self.associated_user:
+            self.queue.add(user.id, self.associated_user[reaction.message.id])
+            await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (len(self.queue.queue)-1)))
 
     async def on_message(self, message):
         # Lloid should not respond to self
@@ -60,10 +71,10 @@ class Lloid(discord.Client):
                 res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                 if res == turnips.Status.SUCCESS:
                     await message.channel.send("Done.")
-
+                    
                     turnip = self.market.get(message.author.id)
-                    await self.report_channel.send("%s has turnips selling for %d. Local time: %s" % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
-
+                    msg = await self.report_channel.send("%s has turnips selling for %d. Local time: %s" % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                    self.associated_user[msg.id] = message.author.id
                 elif res == turnips.Status.TIMEZONE_REQUIRED:
                     await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
                 elif res == turnips.Status.PRICE_REQUIRED:

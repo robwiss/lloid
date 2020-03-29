@@ -160,7 +160,20 @@ class Status:
     CLOSED = 5
 
 class Queue:
-    def __init__(self):
+    def __init__(self, market):
+        self.market = market
         self.queue = []
 
+    def add(self, guest, owner):
+        requesters = [q[0] for q in self.queue]
+        if guest in requesters:
+            return False
+            
+        self.queue += [(guest, owner)]
+
+        return True
+
+    def next(self):
+        q = self.queue.pop(0)
+        return (q[0], self.market.get(q[1]))
     
