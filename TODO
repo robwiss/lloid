@@ -2,7 +2,7 @@
 ? double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
-private message should confirm whose code you received
+/ private message should confirm whose code you received
 / no error message if you queue up while still in line
 / unqueue yourself by unreacting
 report a listing as closed -- MAYBE. Can be abused

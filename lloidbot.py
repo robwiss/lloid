@@ -65,8 +65,15 @@ class Lloid(discord.Client):
         self.associated_user = {} # message id -> id of the user the message is about
 
     async def on_reaction_add(self, reaction, user):
+        if user == client.user:
+            print("Not gonna entertain myself from my own reaction")
+            return
         print ("reacted")
         print (reaction.message.id, self.associated_user)
+        if reaction.emoji == '🦝':
+            await self.queue_user(reaction, user)
+
+    async def queue_user(self, reaction, user):
         if reaction.message.id in self.associated_user:
             status, size = self.market.request(user.id, self.associated_user[reaction.message.id])
             if status:
@@ -80,7 +87,7 @@ class Lloid(discord.Client):
                 await user.send("It sounds like you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
-        if self.market.forfeit(user.id):
+        if reaction.emoji == '🦝' and self.market.forfeit(user.id):
             await user.send("Removed you from the queue.")
 
     async def queue_manager(self, owner):
@@ -120,7 +127,8 @@ class Lloid(discord.Client):
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
                         
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
 
                         self.loop.create_task( self.queue_manager(message.author.id) )
