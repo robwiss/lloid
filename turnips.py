@@ -98,6 +98,9 @@ class StalkMarket:
     def next(self, owner):
         return self.queue.next(owner)
 
+    def close(self, owner):
+        return self.queue.close(owner)
+
     def declare(self, idx, name, price, dodo=None, tz=None, chan=None):
         turnip = self.get(idx, chan)
         if tz is None: 
@@ -168,6 +171,7 @@ class Status:
     DODO_REQUIRED = 3
     ITS_SUNDAY = 4
     CLOSED = 5
+    ALREADY_CLOSED = 6
 
 class Queue:
     def __init__(self, market):
@@ -191,4 +195,18 @@ class Queue:
         q = self.queues[owner].get(block=True)
         del self.requesters[q[0]]
         return (q[0], self.market.get(q[1]))
+
+    def close(self, owner):
+        if owner not in self.queues:
+            return None, Status.ALREADY_CLOSED
+        q = self.queues[owner]
+        del self.queues[owner]
+
+        leftovers = []
+        while not q.empty():
+            r = q.get()[0]
+            leftovers += [r]
+            del self.requesters[r]
+
+        return leftovers, Status.SUCCESS
     

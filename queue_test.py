@@ -66,7 +66,39 @@ class TestQueue(unittest.TestCase):
         assert len(self.market.queue.requesters) == 0
         assert self.market.queue.queues[alice.id].qsize() == 0
 
-        
+    @freezegun.freeze_time(tuesday_morning)
+    def test_close(self):
+        self.insert_sample_rows()
+        self.market.request(100, bella.id)
+        self.market.request(101, bella.id)
+        self.market.request(102, bella.id)
+
+        n = self.market.next(bella.id)
+        assert n[0] == 100
+
+        remaining, status = self.market.close(bella.id)
+        assert status == Status.SUCCESS
+        assert len(remaining) == 2
+        assert 101 in remaining
+        assert 102 in remaining
+
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_cant_close_twice(self):
+        self.insert_sample_rows()
+        self.market.request(100, bella.id)
+        self.market.request(101, bella.id)
+        self.market.request(102, bella.id)
+
+        self.market.next(bella.id)
+        remaining, status = self.market.close(bella.id)
+        assert status == Status.SUCCESS
+        assert len(remaining) == 2
+
+        remaining, status = self.market.close(bella.id)
+        assert status == Status.ALREADY_CLOSED
+        assert remaining is None
+
     @freezegun.freeze_time(tuesday_morning)
     def test_wont_accept_dupe_request(self):
         self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
