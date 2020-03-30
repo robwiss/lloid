@@ -96,6 +96,23 @@ class TestQueue(unittest.TestCase):
         assert 101 in remaining
         assert 102 in remaining
 
+    @freezegun.freeze_time(tuesday_morning)
+    def test_forfeit(self):
+        self.insert_sample_rows()
+        self.market.request(100, bella.id)
+        self.market.request(101, bella.id)
+        self.market.request(102, bella.id)
+        self.market.request(103, bella.id)
+
+        n = self.market.next(bella.id)
+        assert n[0] == 100
+
+        self.market.forfeit(102)
+
+        n = self.market.next(bella.id)
+        assert n[0] == 101
+        n = self.market.next(bella.id)
+        assert n[0] == 103
 
     @freezegun.freeze_time(tuesday_morning)
     def test_cant_close_twice(self):

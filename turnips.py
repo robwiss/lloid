@@ -98,6 +98,9 @@ class StalkMarket:
             return False, None
         return True, self.queue.queues[owner].qsize()
 
+    def forfeit(self, requester):
+        return self.queue.forfeit(requester)
+
     def next(self, owner):
         return self.queue.next(owner)
 
@@ -181,6 +184,7 @@ class Queue:
         self.market = market
         self.queues = {}
         self.requesters = {}
+        self.stale = {}
     
     def new_queue(self, owner):
         self.queues[owner] = queue.Queue()
@@ -194,10 +198,28 @@ class Queue:
 
         return True
 
+    def forfeit(self, guest):
+        if guest not in self.requesters:
+            return False
+
+        owner = self.requesters[guest]
+        del self.requesters[guest]
+
+        if owner not in self.stale:
+            self.stale[owner] = []
+        self.stale[owner] += [guest]
+
+        return True
+
     def next(self, owner):
         q = self.queues[owner].get(block=False)
+        while q is not None and owner in self.stale and q[0] in self.stale[owner]:
+            self.stale[owner].remove(q[0])
+            q = self.queues[owner].get(block=False)
+            
         if q is None:
             return None
+        
         del self.requesters[q[0]]
         return (q[0], self.market.get(q[1]))
 

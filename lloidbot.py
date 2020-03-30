@@ -79,6 +79,10 @@ class Lloid(discord.Client):
             else:
                 await user.send("It sounds like you're in line elsewhere at the moment.")
 
+    async def on_reaction_remove(self, reaction, user):
+        if self.market.forfeit(user.id):
+            await user.send("Removed you from the queue.")
+
     async def queue_manager(self, owner):
         while True:
             print("polling")
@@ -86,7 +90,6 @@ class Lloid(discord.Client):
             try:
                 task = self.market.next(owner)
             except:
-                print("Unexpected error:", sys.exc_info())
                 print("sleep for now")
                 await asyncio.sleep(poll_sleep_interval)
                 continue
