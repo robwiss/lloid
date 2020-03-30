@@ -6,7 +6,8 @@ import asyncio
 import sys
 
 queue = []
-queue_interval = 5
+queue_interval = 20 
+poll_sleep_interval = 5
 
 class Command:
     Successful = 0
@@ -80,14 +81,14 @@ class Lloid(discord.Client):
             except:
                 print("Unexpected error:", sys.exc_info())
                 print("sleep for now")
-                await asyncio.sleep(15)
+                await asyncio.sleep(poll_sleep_interval)
                 continue
             if task is None: # Then the owner closed
                 print("Closed")
                 break
             print ("dequeued: %s, %s" % (task[0], task[1].id))
             await self.get_user(task[0]).send("Dodo: %s" % task[1].dodo)
-            await asyncio.sleep(5*queue_interval)
+            await asyncio.sleep(queue_interval)
 
     async def on_message(self, message):
         # Lloid should not respond to self
