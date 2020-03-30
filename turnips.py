@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
+import queue
 
 intervals = {
     "1a": 0,
@@ -67,6 +68,7 @@ class StalkMarket:
     def __init__(self, db: sqlite3.Connection):
         self.db = db
         self.db_init()
+        self.queue = Queue(self)
 
     def db_init(self):
         self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, 
@@ -89,6 +91,12 @@ class StalkMarket:
             return None
         else:
             return Turnip.from_row(results[0])
+
+    def request(self, requester, owner):
+        self.queue.request(requester, owner)
+
+    def next(self, owner):
+        return self.queue.next(owner)
 
     def declare(self, idx, name, price, dodo=None, tz=None, chan=None):
         turnip = self.get(idx, chan)
@@ -118,6 +126,8 @@ class StalkMarket:
                 (price, tz, current_datetime(tz), idx))
 
         self.db.commit()
+
+        self.queue.new_queue(idx)
 
         return Status.SUCCESS
 
@@ -162,18 +172,23 @@ class Status:
 class Queue:
     def __init__(self, market):
         self.market = market
-        self.queue = []
+        self.queues = {}
+        self.requesters = {}
+    
+    def new_queue(self, owner):
+        self.queues[owner] = queue.Queue()
 
-    def add(self, guest, owner):
-        requesters = [q[0] for q in self.queue]
-        if guest in requesters:
+    def request(self, guest, owner):
+        if guest in self.requesters:
             return False
+        self.requesters[guest] = owner
             
-        self.queue += [(guest, owner)]
+        self.queues[owner].put((guest, owner))
 
         return True
 
-    def next(self):
-        q = self.queue.pop(0)
+    def next(self, owner):
+        q = self.queues[owner].get(block=True)
+        del self.requesters[q[0]]
         return (q[0], self.market.get(q[1]))
     

@@ -21,30 +21,74 @@ class TestQueue(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
         self.market = turnips.StalkMarket(self.db)
-        self.queue = turnips.Queue(self.market)
  
         t = self.market.get_all()
         
         assert len(t) == 0
 
     def insert_sample_rows(self):
-        self.db.execute("replace into turnips(chan, nick, dodo, utcoffset) values"
-                        "( 'global', 'Alice', 'ALICE', 0 )")
-        self.db.execute("replace into turnips(chan, nick, dodo, utcoffset) values"
-                        "( 'nookmart', 'Bella', 'BELLA', 5 )")
-        self.market.declare(alice.nick, 150, alice.dodo, alice.tz)
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset, 'global')
+        self.market.declare(bella.id, bella.name, 100, bella.dodo, bella.gmtoffset, 'nookmart')
     
     def tearDown(self):
         self.db.execute("delete from turnips")
         self.db.close()
 
     # we need multiple queues per person
-    def test_queue(self):
-        pass
+    @freezegun.freeze_time(tuesday_morning)
+    def test_queue_created(self):
+        assert len(self.market.queue.queues) == 0 
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+        assert len(self.market.queue.queues) == 1
+        self.market.declare(bella.id, bella.name, 150, bella.dodo, bella.gmtoffset)
+        assert len(self.market.queue.queues) == 2 
 
-    def test_wont_queue_dupe(self):
-        assert self.queue.add(100, 1)
-        assert not self.queue.add(100, 1)
+    @freezegun.freeze_time(tuesday_morning)
+    def test_wont_dupe_queues(self):
+        assert len(self.market.queue.queues) == 0 
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+        assert len(self.market.queue.queues) == 1
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+        assert len(self.market.queue.queues) == 1
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_request_next_dequeues(self):
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+        self.market.declare(bella.id, bella.name, 250, bella.dodo, bella.gmtoffset)
+
+        assert len(self.market.queue.requesters) == 0 
+        self.market.request(100, alice.id)
+        assert len(self.market.queue.requesters) == 1
+        assert self.market.queue.queues[alice.id].qsize() == 1
+        n = self.market.next(alice.id)
+        assert n[0] == 100
+        assert n[1].id == alice.id
+        assert len(self.market.queue.requesters) == 0
+        assert self.market.queue.queues[alice.id].qsize() == 0
+
+        
+    @freezegun.freeze_time(tuesday_morning)
+    def test_wont_accept_dupe_request(self):
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+
+        assert len(self.market.queue.requesters) == 0 
+        self.market.request(100, alice.id)
+        assert len(self.market.queue.requesters) == 1
+        self.market.request(100, alice.id)
+        assert len(self.market.queue.requesters) == 1 
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_wont_accept_dupe_request_across_different_owners(self):
+        self.insert_sample_rows()
+
+        assert len(self.market.queue.requesters) == 0 
+        self.market.request(100, alice.id)
+        assert len(self.market.queue.requesters) == 1
+        self.market.request(100, bella.id)
+        assert len(self.market.queue.requesters) == 1 
+        assert len(self.market.queue.queues) == 2
+        assert self.market.queue.queues[alice.id].qsize() == 1
+        assert self.market.queue.queues[bella.id].qsize() == 0
 
 if __name__ == '__main__':
     unittest.main() 
