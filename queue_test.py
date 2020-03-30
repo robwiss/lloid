@@ -53,8 +53,7 @@ class TestQueue(unittest.TestCase):
 
     @freezegun.freeze_time(tuesday_morning)
     def test_request_next_dequeues(self):
-        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
-        self.market.declare(bella.id, bella.name, 250, bella.dodo, bella.gmtoffset)
+        self.insert_sample_rows()
 
         assert len(self.market.queue.requesters) == 0 
         self.market.request(100, alice.id)
@@ -65,6 +64,21 @@ class TestQueue(unittest.TestCase):
         assert n[1].id == alice.id
         assert len(self.market.queue.requesters) == 0
         assert self.market.queue.queues[alice.id].qsize() == 0
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_request_next_returns_queue_size(self):
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+
+        first = self.market.request(100, alice.id)
+        second = self.market.request(101, alice.id)
+        third = self.market.request(102, alice.id)
+        fourth = self.market.request(103, alice.id)
+
+        assert first == 1
+        assert second == 2
+        assert third == 3
+        assert fourth == 4
+
 
     @freezegun.freeze_time(tuesday_morning)
     def test_close(self):

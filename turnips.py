@@ -94,6 +94,7 @@ class StalkMarket:
 
     def request(self, requester, owner):
         self.queue.request(requester, owner)
+        return self.queue.queues[owner].qsize()
 
     def next(self, owner):
         return self.queue.next(owner)

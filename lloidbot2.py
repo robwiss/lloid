@@ -50,15 +50,14 @@ class Lloid(discord.Client):
         await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
-        self.queue = turnips.Queue(self.market)
         self.associated_user = {} # message id -> id of the user the message is about
 
     async def on_reaction_add(self, reaction, user):
         print ("reacted")
         print (reaction.message.id, self.associated_user)
         if reaction.message.id in self.associated_user:
-            self.queue.add(user.id, self.associated_user[reaction.message.id])
-            await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (len(self.queue.queue)-1)))
+            size = self.market.request(user.id, self.associated_user[reaction.message.id])
+            await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (size-1)))
 
     async def on_message(self, message):
         # Lloid should not respond to self
