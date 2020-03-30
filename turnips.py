@@ -93,8 +93,10 @@ class StalkMarket:
             return Turnip.from_row(results[0])
 
     def request(self, requester, owner):
-        self.queue.request(requester, owner)
-        return self.queue.queues[owner].qsize()
+        r = self.queue.request(requester, owner)
+        if not r:
+            return False, None
+        return True, self.queue.queues[owner].qsize()
 
     def next(self, owner):
         return self.queue.next(owner)

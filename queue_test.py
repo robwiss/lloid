@@ -69,10 +69,10 @@ class TestQueue(unittest.TestCase):
     def test_request_next_returns_queue_size(self):
         self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
 
-        first = self.market.request(100, alice.id)
-        second = self.market.request(101, alice.id)
-        third = self.market.request(102, alice.id)
-        fourth = self.market.request(103, alice.id)
+        _, first = self.market.request(100, alice.id)
+        _, second = self.market.request(101, alice.id)
+        _, third = self.market.request(102, alice.id)
+        _, fourth = self.market.request(103, alice.id)
 
         assert first == 1
         assert second == 2
