@@ -73,7 +73,7 @@ class Lloid(discord.Client):
                     await message.channel.send("Done.")
                     
                     turnip = self.market.get(message.author.id)
-                    msg = await self.report_channel.send("%s has turnips selling for %d. Local time: %s" % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                    msg = await self.report_channel.send("%s has turnips selling for %d. Local time: %s. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                     self.associated_user[msg.id] = message.author.id
                 elif res == turnips.Status.TIMEZONE_REQUIRED:
                     await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")

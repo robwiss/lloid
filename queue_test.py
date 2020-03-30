@@ -38,6 +38,7 @@ class TestQueue(unittest.TestCase):
         self.db.execute("delete from turnips")
         self.db.close()
 
+    # we need multiple queues per person
     def test_queue(self):
         pass
 
