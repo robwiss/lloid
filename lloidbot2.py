@@ -12,11 +12,20 @@ class Command:
     Successful = 0
     Error = 1
 
+    # Command types
+    Close = 2
+
     def __init__(self, command):
+        print(command.strip().lower())
+        if command.strip().lower() == "close":
+            self.status = Command.Successful
+            self.cmd = Command.Close
+            return
         self.price = None
         self.dodo = None
         self.tz = None
         self.status = Command.Successful
+        self.cmd = 0
 
         if command is None:
             self.status = Command.Error
@@ -71,7 +80,7 @@ class Lloid(discord.Client):
             except:
                 print("Unexpected error:", sys.exc_info())
                 print("sleep for now")
-                await asyncio.sleep(5)
+                await asyncio.sleep(15)
                 continue
             if task is None: # Then the owner closed
                 print("Closed")
@@ -88,25 +97,32 @@ class Lloid(discord.Client):
         if isinstance(message.channel, discord.DMChannel): 
             command = Command(message.content)
             if command.status == Command.Successful:
-                res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
-                if res == turnips.Status.SUCCESS:
-                    await message.channel.send("Done. Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
-                    
-                    turnip = self.market.get(message.author.id)
-                    msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
-                    self.associated_user[msg.id] = message.author.id
+                if command.cmd == Command.Close:
+                    await message.channel.send("Thanks for responsibly closing your doors! I'll give my condolences to the people still in line, if any.")
+                    denied, status = self.market.close(message.author.id)
+                    if status == turnips.Status.SUCCESS:
+                        for d in denied:
+                            await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
+                else:
+                    res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
+                    if res == turnips.Status.SUCCESS:
+                        await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
+                        
+                        turnip = self.market.get(message.author.id)
+                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        self.associated_user[msg.id] = message.author.id
 
-                    self.loop.create_task( self.queue_manager(message.author.id) )
-                elif res == turnips.Status.TIMEZONE_REQUIRED:
-                    await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
-                elif res == turnips.Status.PRICE_REQUIRED:
-                    await message.channel.send("You'll need to tell us how much the turnips are at least.")
-                elif res == turnips.Status.DODO_REQUIRED:
-                    await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
-                elif res == turnips.Status.ITS_SUNDAY:
-                    await message.channel.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
-                elif res == turnips.Status.CLOSED:
-                    await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
+                        self.loop.create_task( self.queue_manager(message.author.id) )
+                    elif res == turnips.Status.TIMEZONE_REQUIRED:
+                        await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
+                    elif res == turnips.Status.PRICE_REQUIRED:
+                        await message.channel.send("You'll need to tell us how much the turnips are at least.")
+                    elif res == turnips.Status.DODO_REQUIRED:
+                        await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
+                    elif res == turnips.Status.ITS_SUNDAY:
+                        await message.channel.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
+                    elif res == turnips.Status.CLOSED:
+                        await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
             else:
                 await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset]\"")
         else:
