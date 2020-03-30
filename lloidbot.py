@@ -97,7 +97,7 @@ class Lloid(discord.Client):
                 print("Closed")
                 break
             print ("dequeued: %s, %s" % (task[0], task[1].id))
-            await self.get_user(task[0]).send("Dodo: %s" % task[1].dodo)
+            await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, and leave a tip if you can. Their Dodo code is **%s**." % (task[1].name, task[1].dodo))
             await asyncio.sleep(queue_interval)
 
     async def on_message(self, message):
