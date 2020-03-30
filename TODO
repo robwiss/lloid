@@ -12,8 +12,5 @@ when closing your market, post should be edited to reflect
 [A-HJ-NP-Y0-9]{5} - validate dodo codes
 refactor
 
-*** FEEDBACK FROM IRC ***
-- Allow players to annonuce they're done
-- Allow players to leave the queue
+*** FEEDBACK FROM Discord/IRC ***
 i recommend setting up sentry as well for easier logging
-it takes 5 minutes or so

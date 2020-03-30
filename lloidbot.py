@@ -63,6 +63,7 @@ class Lloid(discord.Client):
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
         self.associated_user = {} # message id -> id of the user the message is about
+        self.associated_message = {} # reverse mapping of the above
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user:
@@ -82,7 +83,7 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take" % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up." % (interval_s, interval_e))
             else:
                 await user.send("It sounds like you're in line elsewhere at the moment.")
 
@@ -121,6 +122,9 @@ class Lloid(discord.Client):
                     if status == turnips.Status.SUCCESS:
                         for d in denied:
                             await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
+                        await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
+                        del self.associated_user[self.associated_message[message.author.id].id]
+                        del self.associated_message[message.author.id]
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS:
@@ -130,6 +134,7 @@ class Lloid(discord.Client):
                         msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
+                        self.associated_message[message.author.id] = msg
 
                         self.loop.create_task( self.queue_manager(message.author.id) )
                     elif res == turnips.Status.TIMEZONE_REQUIRED:
