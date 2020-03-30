@@ -2,13 +2,14 @@
 double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
+no error message if you queue up while still in line
 unqueue yourself by unreacting
+report a listing as closed -- MAYBE. Can be abused
 when closing your market, post should be edited to reflect
 only use bot's reactions
-no error message if you queue up while still in line
 negative wait time estimate
 [A-HJ-NP-Y0-9]{5} - validate dodo codes
-
+refactor
 
 *** FEEDBACK FROM IRC ***
 - Allow players to annonuce they're done
