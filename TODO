@@ -1,0 +1,17 @@
+*** MUST SOLVE BEFORE TAKING TO PROD ***
+double-queuing seems to still work
+
+*** FEATURES THAT CAN BE ADDED LATER ***
+unqueue yourself by unreacting
+when closing your market, post should be edited to reflect
+only use bot's reactions
+no error message if you queue up while still in line
+negative wait time estimate
+[A-HJ-NP-Y0-9]{5} - validate dodo codes
+
+
+*** FEEDBACK FROM IRC ***
+- Allow players to annonuce they're done
+- Allow players to leave the queue
+i recommend setting up sentry as well for easier logging
+it takes 5 minutes or so
