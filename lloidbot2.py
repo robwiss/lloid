@@ -3,6 +3,7 @@ from discord.utils import get
 import sqlite3
 import turnips
 import asyncio
+import sys
 
 queue = []
 queue_interval = 5
@@ -58,16 +59,24 @@ class Lloid(discord.Client):
         print (reaction.message.id, self.associated_user)
         if reaction.message.id in self.associated_user:
             size = self.market.request(user.id, self.associated_user[reaction.message.id])
+            print("queued %s up for %s" % (user.id, self.associated_user[reaction.message.id]))
             await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (size-1)))
 
     async def queue_manager(self, owner):
-        i = 0
         while True:
-            print (i)
-            i += 1
-            task = self.market.next(owner)
-            if task is None:
+            print("polling")
+            task = None
+            try:
+                task = self.market.next(owner)
+            except:
+                print("Unexpected error:", sys.exc_info())
+                print("sleep for now")
+                await asyncio.sleep(5)
+                continue
+            if task is None: # Then the owner closed
+                print("Closed")
                 break
+            print ("dequeued: %s, %s" % (task[0], task[1].id))
             await self.get_user(task[0]).send("Dodo: %s" % task[1].dodo)
             await asyncio.sleep(5*queue_interval)
 
@@ -87,7 +96,7 @@ class Lloid(discord.Client):
                     msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                     self.associated_user[msg.id] = message.author.id
 
-                    #self.bg_task = self.loop.create_task( self.queue_manager(message.author.id) )
+                    self.loop.create_task( self.queue_manager(message.author.id) )
                 elif res == turnips.Status.TIMEZONE_REQUIRED:
                     await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
                 elif res == turnips.Status.PRICE_REQUIRED:

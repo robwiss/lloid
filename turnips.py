@@ -193,7 +193,7 @@ class Queue:
         return True
 
     def next(self, owner):
-        q = self.queues[owner].get(block=True)
+        q = self.queues[owner].get(block=False)
         if q is None:
             return None
         del self.requesters[q[0]]
