@@ -70,7 +70,11 @@ class Lloid(discord.Client):
         if reaction.message.id in self.associated_user:
             size = self.market.request(user.id, self.associated_user[reaction.message.id])
             print("queued %s up for %s" % (user.id, self.associated_user[reaction.message.id]))
-            await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (size-1)))
+            if size == 0:
+                size = 1
+            interval_s = queue_interval * (size - 1) // 60
+            interval_e = queue_interval * size // 60
+            await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take" % (interval_s, interval_e))
 
     async def queue_manager(self, owner):
         while True:
