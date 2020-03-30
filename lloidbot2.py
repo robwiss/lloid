@@ -2,6 +2,7 @@ import discord
 from discord.utils import get
 import sqlite3
 import turnips
+import asyncio
 
 queue = []
 queue_interval = 5
@@ -59,6 +60,17 @@ class Lloid(discord.Client):
             size = self.market.request(user.id, self.associated_user[reaction.message.id])
             await user.send("Queued you up for a dodo code. Estimated time: %d minutes, give or take" % (queue_interval * (size-1)))
 
+    async def queue_manager(self, owner):
+        i = 0
+        while True:
+            print (i)
+            i += 1
+            task = self.market.next(owner)
+            if task is None:
+                break
+            await self.get_user(task[0]).send("Dodo: %s" % task[1].dodo)
+            await asyncio.sleep(5*queue_interval)
+
     async def on_message(self, message):
         # Lloid should not respond to self
         if message.author == client.user:
@@ -69,11 +81,13 @@ class Lloid(discord.Client):
             if command.status == Command.Successful:
                 res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                 if res == turnips.Status.SUCCESS:
-                    await message.channel.send("Done.")
+                    await message.channel.send("Done. Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
                     
                     turnip = self.market.get(message.author.id)
-                    msg = await self.report_channel.send("%s has turnips selling for %d. Local time: %s. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                    msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                     self.associated_user[msg.id] = message.author.id
+
+                    #self.bg_task = self.loop.create_task( self.queue_manager(message.author.id) )
                 elif res == turnips.Status.TIMEZONE_REQUIRED:
                     await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
                 elif res == turnips.Status.PRICE_REQUIRED:
@@ -89,7 +103,6 @@ class Lloid(discord.Client):
         else:
             pass 
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
-
 
 client = Lloid()
 with open("secret") as f:

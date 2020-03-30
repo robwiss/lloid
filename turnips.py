@@ -194,6 +194,8 @@ class Queue:
 
     def next(self, owner):
         q = self.queues[owner].get(block=True)
+        if q is None:
+            return None
         del self.requesters[q[0]]
         return (q[0], self.market.get(q[1]))
 
@@ -201,13 +203,15 @@ class Queue:
         if owner not in self.queues:
             return None, Status.ALREADY_CLOSED
         q = self.queues[owner]
-        del self.queues[owner]
 
         leftovers = []
         while not q.empty():
             r = q.get()[0]
             leftovers += [r]
             del self.requesters[r]
+
+        self.queues[owner].put(None)
+        del self.queues[owner]
 
         return leftovers, Status.SUCCESS
     
