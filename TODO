@@ -1,7 +1,7 @@
 *** MUST SOLVE BEFORE TAKING TO PROD ***
 / dodo codes not updating
 / unreacting from any message dequeues you
-? double-queuing seems to still work
+/ double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
 estimated time should be in minutes
