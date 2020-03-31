@@ -160,7 +160,7 @@ class Lloid(discord.Client):
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
                         
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(">>> * **THIS IS A TEST** * **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                         # await msg.pin()
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
