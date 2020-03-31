@@ -2,6 +2,9 @@
 ? double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
+check size of queue and time left in queue
+5 minute warning
+let lloid pin/unpin messages
 Let host pause to unclog
 manually let the next person in
 / private message should confirm whose code you received
