@@ -57,17 +57,17 @@ class Command:
 class Lloid(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        self.report_channel = discord.utils.get(self.get_all_channels(), name='lloidonly')
+        self.report_channel = discord.utils.get(self.get_all_channels(), name='turnips')
         self.chan = 'global'
-        await self.report_channel.send("I'm online")
+        # await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
         self.associated_user = {} # message id -> id of the user the message is about
         self.associated_message = {} # reverse mapping of the above
 
     async def on_reaction_add(self, reaction, user):
-        if user == client.user:
-            print("Not gonna entertain myself from my own reaction")
+        if user == client.user or reaction.message.author != client.user:
+            print("Not a reaction i should care about")
             return
         print ("reacted")
         print (reaction.message.id, self.associated_user)
@@ -85,7 +85,7 @@ class Lloid(discord.Client):
                 interval_e = queue_interval * size // 60
                 await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up." % (interval_s, interval_e))
             else:
-                await user.send("It sounds like you're in line elsewhere at the moment.")
+                await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
         if reaction.emoji == '🦝' and self.market.forfeit(user.id):

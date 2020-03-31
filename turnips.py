@@ -193,7 +193,9 @@ class Queue:
         if guest in self.requesters:
             return False
         self.requesters[guest] = owner
-            
+        
+        if owner not in self.queues:
+            return False
         self.queues[owner].put((guest, owner))
 
         return True
