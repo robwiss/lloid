@@ -6,7 +6,7 @@ import asyncio
 import sys
 
 queue = []
-queue_interval = 60*5
+queue_interval = 20 # 60*5
 poll_sleep_interval = 5
 
 class Command:
@@ -88,8 +88,10 @@ class Lloid(discord.Client):
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
-        if reaction.emoji == '🦝' and self.market.forfeit(user.id):
-            await user.send("Removed you from the queue.")
+        if reaction.emoji == '🦝' and reaction.message.id in self.associated_user:
+            waiting_for = self.market.queue.requesters[user.id]
+            if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
+                await user.send("Removed you from the queue.")
 
     async def queue_manager(self, owner):
         while True:
@@ -131,7 +133,7 @@ class Lloid(discord.Client):
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
                         
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        msg = await self.report_channel.send(">>> * **THIS IS A TEST** * **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg

@@ -234,7 +234,8 @@ class Queue:
         while not q.empty():
             r = q.get()[0]
             leftovers += [r]
-            del self.requesters[r]
+            if r in self.requesters:
+                del self.requesters[r]
 
         self.queues[owner].put(None)
         del self.queues[owner]
