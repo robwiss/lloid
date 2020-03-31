@@ -4,6 +4,7 @@
 ? double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
+allow bot to be on multiple discord servers
 remove stale entries from recently_departed list when market closes.
 / check size of queue and time left in queue
 5 minute warning
