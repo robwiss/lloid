@@ -128,7 +128,8 @@ class Lloid(discord.Client):
                 await self.sleepers[owner]
             except:
                 pass
-            del self.sleepers[owner]
+            if owner in self.sleepers:
+                del self.sleepers[owner]
 
     async def on_message(self, message):
         # Lloid should not respond to self
