@@ -4,25 +4,27 @@
 ? double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
+estimated time should be in minutes
 have lloid announce if they're going down for maintenance
-
-allow bot to be on multiple discord servers
-remove stale entries from recently_departed list when market closes.
-/ check size of queue and time left in queue
-5 minute warning
-/ let lloid pin/unpin messages - can't test, no permissions
 Let host pause to unclog
 Let host let next person in
+remove stale entries from recently_departed list when market closes.
+5 minute warning
+
+allow bot to be on multiple discord servers
+refactor
+report a listing as closed -- MAYBE. Can be abused
+
+/ check size of queue and time left in queue
+/ let lloid pin/unpin messages - can't test, no permissions
 / manually let the next person in
 / private message should confirm whose code you received
 / no error message if you queue up while still in line
 / unqueue yourself by unreacting
-report a listing as closed -- MAYBE. Can be abused
-when closing your market, post should be edited to reflect
+/ when closing your market, post should be edited to reflect
 /only use bot's reactions
 / negative wait time estimate
 [A-HJ-NP-Y0-9]{5} - validate dodo codes
-refactor
 
 *** FEEDBACK FROM Discord/IRC ***
 i recommend setting up sentry as well for easier logging
