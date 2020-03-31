@@ -200,7 +200,7 @@ class Lloid(discord.Client):
                 await message.channel.send("You don't seem to be queued up for anything.")
             else:
                 timeleft = index * queue_interval
-                await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes). Remaining people in whole queue: %d" % (timeleft//60, queue_interval//60, qsize))
+                await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes; may be greater or lesser depending on how quickly people finish their business on the island). Remaining people in whole queue: %d." % (timeleft//60, queue_interval//60, qsize))
 
 
 client = Lloid()

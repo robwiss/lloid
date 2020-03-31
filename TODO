@@ -4,10 +4,11 @@
 / double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
-estimated time should be in minutes
-have lloid announce if they're going down for maintenance
+make !queueinfo work in pms
+/ estimated time should be in minutes
 Let host pause to unclog
 Let host let next person in
+have lloid announce if they're going down for maintenance
 remove stale entries from recently_departed list when market closes.
 5 minute warning
 
