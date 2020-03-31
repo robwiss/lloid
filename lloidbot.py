@@ -91,7 +91,7 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code." % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code. Also, a lot of people might be ahead of you, so please just go in, do the one thing you're there for, and leave. If you're there to sell turnips, don't look for Saharah or shop at Nook's!" % (interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
@@ -187,6 +187,9 @@ class Lloid(discord.Client):
     async def public_message_handler(self, message):
         if message.content == "!queueinfo":
             guest = message.author.id
+            if guest not in self.market.queue.requesters:
+                await message.channel.send("You don't seem to be queued up for anything. It could also be that the code got sent to you just now. Please check your DMs.")
+                return
             owner = self.market.queue.requesters[guest]
             q = self.market.queue.queues[owner]
             qsize = q.qsize()
