@@ -91,7 +91,7 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up." % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code." % (interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
