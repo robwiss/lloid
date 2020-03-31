@@ -97,16 +97,14 @@ class Lloid(discord.Client):
 
     async def queue_manager(self, owner):
         while True:
-            print("polling")
             task = None
             try:
                 task = self.market.next(owner)
             except:
-                print("sleep for now")
                 await asyncio.sleep(poll_sleep_interval)
                 continue
             if task is None: # Then the owner closed
-                print("Closed")
+                print("Closed queue for %s" % owner)
                 break
             print ("dequeued: %s, %s" % (task[0], task[1].id))
             await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, and leave a tip if you can. Their Dodo code is **%s**." % (task[1].name, task[1].dodo))
