@@ -15,12 +15,17 @@ class Command:
 
     # Command types
     Close = 2
+    Done = 3
 
     def __init__(self, command):
         print(command.strip().lower())
         if command.strip().lower() == "close":
             self.status = Command.Successful
             self.cmd = Command.Close
+            return
+        elif command.strip().lower() == "done":
+            self.status = Command.Successful
+            self.cmd = Command.Done
             return
 
         self.price = None
@@ -66,6 +71,7 @@ class Lloid(discord.Client):
         self.associated_user = {} # message id -> id of the user the message is about
         self.associated_message = {} # reverse mapping of the above
         self.sleepers = {}
+        self.recently_departed = {}
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -106,9 +112,17 @@ class Lloid(discord.Client):
             if task is None: # Then the owner closed
                 print("Closed queue for %s" % owner)
                 break
-            print ("dequeued: %s, %s" % (task[0], task[1].id))
-            await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, and leave a tip if you can. Their Dodo code is **%s**." % (task[1].name, task[1].dodo))
-            await asyncio.sleep(queue_interval)
+
+            await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
+
+            self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
+            self.recently_departed[task[0]] = owner
+            print("%s just departed for %s" % (task[0], owner))
+            try:
+                await self.sleepers[owner]
+            except:
+                pass
+            del self.sleepers[owner]
 
     async def on_message(self, message):
         # Lloid should not respond to self
@@ -128,6 +142,12 @@ class Lloid(discord.Client):
                         # await self.associated_message[message.author.id].unpin()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
+                elif command.cmd == Command.Done:
+                    guest = message.author.id
+                    if guest in self.recently_departed:
+                        owner = self.recently_departed[guest]
+                        self.sleepers[owner].cancel()
+                        await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS:
