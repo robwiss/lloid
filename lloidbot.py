@@ -125,6 +125,7 @@ class Lloid(discord.Client):
                         for d in denied:
                             await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
                         await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
+                        # await self.associated_message[message.author.id].unpin()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
                 else:
@@ -134,6 +135,7 @@ class Lloid(discord.Client):
                         
                         turnip = self.market.get(message.author.id)
                         msg = await self.report_channel.send(">>> * **THIS IS A TEST** * **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        # await msg.pin()
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg
