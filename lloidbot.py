@@ -22,6 +22,7 @@ class Command:
             self.status = Command.Successful
             self.cmd = Command.Close
             return
+
         self.price = None
         self.dodo = None
         self.tz = None
@@ -64,6 +65,7 @@ class Lloid(discord.Client):
         self.market = turnips.StalkMarket(self.db)
         self.associated_user = {} # message id -> id of the user the message is about
         self.associated_message = {} # reverse mapping of the above
+        self.sleepers = {}
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -154,8 +156,27 @@ class Lloid(discord.Client):
             else:
                 await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset]\"")
         else:
-            pass 
+            await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
+    
+    async def public_message_handler(self, message):
+        if message.content == "!queueinfo":
+            guest = message.author.id
+            owner = self.market.queue.requesters[guest]
+            q = self.market.queue.queues[owner]
+            qsize = q.qsize()
+            index = -1
+            try:
+                index = [qq[0] for qq in list(q.queue)].index(guest)
+            except:
+                pass
+            
+            if index < 0:
+                await message.channel.send("You don't seem to be queued up for anything.")
+            else:
+                timeleft = index * queue_interval
+                await message.channel.send("Approximate time left for you: %d seconds. Remaining people in whole queue: %d" % (timeleft, qsize))
+
 
 client = Lloid()
 with open("secret") as f:
