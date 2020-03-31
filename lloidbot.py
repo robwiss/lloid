@@ -96,7 +96,7 @@ class Lloid(discord.Client):
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
-        if reaction.emoji == '🦝' and reaction.message.id in self.associated_user:
+        if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
             waiting_for = self.market.queue.requesters[user.id]
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
                 await user.send("Removed you from the queue.")
@@ -114,6 +114,12 @@ class Lloid(discord.Client):
                 break
 
             await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
+            q = list(self.market.queue.queues[owner].queue)
+            if len(q) > 0:
+                next_in_line = self.get_user(q[0])
+                if next_in_line is not None:
+                    next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
+                print(q[0])
 
             self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
             self.recently_departed[task[0]] = owner
