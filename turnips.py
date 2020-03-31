@@ -136,9 +136,7 @@ class StalkMarket:
 
         self.db.commit()
 
-        self.queue.new_queue(idx)
-
-        return Status.SUCCESS
+        return self.queue.new_queue(idx)
 
     def exists(self, user, chan=None):
         r = self.get_all(chan)
@@ -188,7 +186,12 @@ class Queue:
         self.stale = {}
     
     def new_queue(self, owner):
+        if owner in self.queues:
+            return Status.ALREADY_OPEN
+            
         self.queues[owner] = queue.Queue()
+
+        return Status.SUCCESS
 
     def request(self, guest, owner):
         if guest in self.requesters:
