@@ -131,8 +131,8 @@ class StalkMarket:
             self.db.execute("replace into turnips(chan, id, nick, dodo," + field + ", utcoffset, latest_time) values"
                     " (?,?,?,?,?,?,?)", (chan, idx, name, dodo, price, tz, current_datetime(tz)))
         else:
-            self.db.execute("update turnips set " + field + "=?, utcoffset=?, latest_time=? where id=? ", 
-                (price, tz, current_datetime(tz), idx))
+            self.db.execute("update turnips set " + field + "=?, dodo=?, utcoffset=?, latest_time=? where id=? ", 
+                (price, dodo, tz, current_datetime(tz), idx))
 
         self.db.commit()
 
@@ -178,6 +178,7 @@ class Status:
     ITS_SUNDAY = 4
     CLOSED = 5
     ALREADY_CLOSED = 6
+    ALREADY_OPEN = 7
 
 class Queue:
     def __init__(self, market):
