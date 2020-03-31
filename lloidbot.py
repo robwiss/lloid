@@ -6,7 +6,7 @@ import asyncio
 import sys
 
 queue = []
-queue_interval = 20 
+queue_interval = 60*5
 poll_sleep_interval = 5
 
 class Command:

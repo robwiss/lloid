@@ -2,6 +2,8 @@
 ? double-queuing seems to still work
 
 *** FEATURES THAT CAN BE ADDED LATER ***
+Let host pause to unclog
+manually let the next person in
 / private message should confirm whose code you received
 / no error message if you queue up while still in line
 / unqueue yourself by unreacting
