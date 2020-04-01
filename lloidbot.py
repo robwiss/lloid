@@ -151,8 +151,8 @@ class Lloid(discord.Client):
                         del self.associated_message[message.author.id]
                 elif command.cmd == Command.Done:
                     guest = message.author.id
-                    if guest in self.recently_departed:
-                        owner = self.recently_departed[guest]
+                    owner = self.recently_departed.pop(guest, None)
+                    if owner is not None:
                         self.sleepers[owner].cancel()
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
