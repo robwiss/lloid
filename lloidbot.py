@@ -125,7 +125,6 @@ class Lloid(discord.Client):
         try:
             task = self.market.next(owner)
         except:
-            print("queue was empty")
             return Lloid.QueueEmpty
         if task is None: # Then the owner closed
             print("Closed queue for %s" % owner)
