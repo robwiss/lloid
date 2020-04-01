@@ -4,6 +4,8 @@ import sqlite3
 import turnips
 import asyncio
 import sys
+from dotenv import load_dotenv
+import os
 
 queue = []
 queue_interval = 60*5
@@ -63,9 +65,8 @@ class Command:
 class Lloid(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        self.report_channel = discord.utils.get(self.get_all_channels(), name='turnips')
+        self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
         self.chan = 'global'
-        # await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
         self.associated_user = {} # message id -> id of the user the message is about
@@ -75,10 +76,9 @@ class Lloid(discord.Client):
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
-            print("Not a reaction i should care about")
+            # ignore own reactions and reactions to messages that aren't made by the bot
             return
-        print ("reacted")
-        print (reaction.message.id, self.associated_user)
+        print(f"Reacted: Message {reaction.message.id}, user {self.associated_user}")
         if reaction.emoji == '🦝':
             await self.queue_user(reaction, user)
 
@@ -205,7 +205,20 @@ class Lloid(discord.Client):
                 timeleft = index * queue_interval
                 await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes; may be greater or lesser depending on how quickly people finish their business on the island). Remaining people in whole queue: %d." % (timeleft//60, queue_interval//60, qsize))
 
+if __name__ == "__main__":
+    load_dotenv()
+    token = os.getenv("TOKEN")
+    interval = os.getenv("QUEUE_INTERVAL")
 
-client = Lloid()
-with open("secret") as f:
-    client.run(f.readline())
+    if not token:
+        raise Exception('TOKEN env variable is not defined')
+
+    if not os.getenv("ANNOUNCE_ID"):
+        raise Exception('ANNOUNCE_ID env variable is not defined')
+
+    if interval:
+        queue_interval = int(interval)
+        print(f"Set interval to {interval}")
+
+    client = Lloid()
+    client.run(token)
