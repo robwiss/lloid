@@ -104,7 +104,7 @@ class Lloid(discord.Client):
         if reaction.message.id in self.associated_user:
             status, size = self.market.request(user.id, self.associated_user[reaction.message.id])
             if status:
-                print("queued %s up for %s" % (user.id, self.associated_user[reaction.message.id]))
+                print("queued %s up for %s" % (user.name, self.get_user(self.associated_user[reaction.message.id]).name))
                 if size == 0:
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
@@ -115,12 +115,12 @@ class Lloid(discord.Client):
 
     async def on_reaction_remove(self, reaction, user):
         if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
+            print ("%s unreacted with raccoon" % user.name)
             waiting_for = self.market.queue.requesters[user.id]
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
                 await user.send("Removed you from the queue.")
 
     async def let_next_person_in(self, owner):
-        print("Letting next person in")
         task = None
         try:
             task = self.market.next(owner)
@@ -130,11 +130,15 @@ class Lloid(discord.Client):
             print("Closed queue for %s" % owner)
             return Lloid.AlreadyClosed
 
+        print("Letting %s in to %s" % (self.get_user(task[0]).name, task[1].name))
         await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
         q = list(self.market.queue.queues[owner].queue)
+        print("remainder in queue = %d" % len(q))
         if len(q) > 0:
+            print("looking up %s" % q[0])
             next_in_line = self.get_user(q[0])
             if next_in_line is not None:
+                print("sending warning")
                 await next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
         print("%s has departed for %s's island" % (self.get_user(task[0]).name, task[1].name))
         self.recently_departed[task[0]] = owner
@@ -205,6 +209,7 @@ class Lloid(discord.Client):
         # Lloid should not respond to self
         if message.author == client.user:
             return
+        print(">>>> %s: %s" % (message.author.name, message.content) )
 
         if isinstance(message.channel, discord.DMChannel):
             command = Command(message.content)
