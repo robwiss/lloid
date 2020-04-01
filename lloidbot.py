@@ -209,9 +209,9 @@ class Lloid(discord.Client):
         # Lloid should not respond to self
         if message.author == client.user:
             return
-        print(">>>> %s: %s" % (message.author.name, message.content) )
 
         if isinstance(message.channel, discord.DMChannel):
+            print(">>>> (PM) %s: %s" % (message.author.name, message.content) )
             command = Command(message.content)
 
             if command.status == Command.Successful:
