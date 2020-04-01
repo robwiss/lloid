@@ -109,7 +109,7 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code. Also, a lot of people might be ahead of you, so please just go in, do the one thing you're there for, and leave. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, DO NOT USE the minus (-) button to exit! There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
@@ -199,8 +199,7 @@ class Lloid(discord.Client):
         if index < 0:
             await message.channel.send("You don't seem to be queued up for anything.")
         else:
-            timeleft = index * queue_interval
-            await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes; may be greater or lesser depending on how quickly people finish their business on the island). Remaining people in whole queue: %d." % (timeleft//60, queue_interval//60, qsize))
+            await message.channel.send("Your position in the queue is %d in a queue of %d people. Position 0 means you're next." % (index, qsize))
 
     async def on_message(self, message):
         # Lloid should not respond to self
@@ -215,11 +214,13 @@ class Lloid(discord.Client):
                     await self.handle_queueinfo(message)
                     return
                 elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
+                    await message.channel.send("Okay, extending waiting period by another %d minutes. You can cancel this by letting the next person in with **next**." % (queue_interval // 60))
                     if message.author.id not in self.requested_pauses:
                         self.requested_pauses[message.author.id] = 0
                     self.requested_pauses[message.author.id] += 1
                     return
                 elif command.cmd == Command.Next:
+                    await message.channel.send("Okay, letting the next person in.")
                     self.requested_pauses[message.author.id] = 0
                     await self.let_next_person_in(message.author.id)
                     await self.reset_sleep(message.author.id)
@@ -248,7 +249,7 @@ class Lloid(discord.Client):
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS or res == turnips.Status.ALREADY_OPEN:
-                        await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax.")
+                        await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by %d minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\"." % ( queue_interval // 60))
                         
                         turnip = self.market.get(message.author.id)
                         msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
