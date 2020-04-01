@@ -34,6 +34,14 @@ class Command:
             self.status = Command.Successful
             self.cmd = Command.QueueInfo
             return
+        elif command.strip().lower() == "pause":
+            self.status = Command.Successful
+            self.cmd = Command.Pause
+            return
+        elif command.strip().lower() == "next":
+            self.status = Command.Successful
+            self.cmd = Command.Next
+            return
 
         self.price = None
         self.dodo = None
@@ -112,10 +120,12 @@ class Lloid(discord.Client):
                 await user.send("Removed you from the queue.")
 
     async def let_next_person_in(self, owner):
+        print("Letting next person in")
         task = None
         try:
             task = self.market.next(owner)
         except:
+            print("queue was empty")
             return Lloid.QueueEmpty
         if task is None: # Then the owner closed
             print("Closed queue for %s" % owner)
@@ -130,16 +140,20 @@ class Lloid(discord.Client):
             print("%s has departed for %s's island" % (next_in_line.name, task[1].name))
         self.recently_departed[task[0]] = owner
 
+        print("should have been successful")
         return Lloid.Successful
 
     async def reset_sleep(self, owner):
+        print("resetting sleep")
         if owner in self.sleepers:
+            print("cancelling current sleep")
             self.sleepers[owner].cancel()
         self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
 
         try:
             await self.sleepers[owner]
         except:
+            print("sleep was cancelled")
             pass
 
         if owner in self.sleepers: # not yet sure why sometimes owner is not in self.sleepers
@@ -152,16 +166,21 @@ class Lloid(discord.Client):
             # we can't move that reset_sleep call up here because that means it would sleep before handing
             # out the first code.
             while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
+                print("sleeping upon request, %d" % self.requested_pauses[owner])
                 self.requested_pauses[owner] -= 1
                 self.reset_sleep(owner)
 
+            print("should let next person in")
             status = await self.let_next_person_in(owner)
             if status == Lloid.QueueEmpty:
+                print("queue apparently empty")
                 await asyncio.sleep(poll_sleep_interval)
                 continue
             elif status == Lloid.AlreadyClosed:
+                print("lloid apparently closed")
                 break
 
+            print("should reset sleep now")
             await self.reset_sleep(owner)
 
     async def handle_queueinfo(self, message):
