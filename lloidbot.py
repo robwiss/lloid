@@ -151,7 +151,7 @@ class Lloid(discord.Client):
             # if it's empty when that happens, then it never reaches the reset_sleep call at the end.
             # we can't move that reset_sleep call up here because that means it would sleep before handing
             # out the first code.
-            while owner in self.requested_pauses[owner] and self.requested_pauses[owner] > 0:
+            while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
                 self.requested_pauses[owner] -= 1
                 self.reset_sleep(owner)
 
