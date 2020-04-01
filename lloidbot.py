@@ -168,7 +168,7 @@ class Lloid(discord.Client):
             while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
                 print("sleeping upon request, %d" % self.requested_pauses[owner])
                 self.requested_pauses[owner] -= 1
-                self.reset_sleep(owner)
+                await self.reset_sleep(owner)
 
             print("should let next person in")
             status = await self.let_next_person_in(owner)
