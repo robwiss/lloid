@@ -75,11 +75,9 @@ class Lloid(discord.Client):
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
-            print("Not a reaction i should care about")
             return
-        print ("reacted")
-        print (reaction.message.id, self.associated_user)
         if reaction.emoji == '🦝':
+            print ("%s reacted with raccoon" % user.name)
             await self.queue_user(reaction, user)
 
     async def queue_user(self, reaction, user):
