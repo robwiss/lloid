@@ -174,10 +174,8 @@ class Lloid(discord.Client):
                 self.requested_pauses[owner] -= 1
                 await self.reset_sleep(owner)
 
-            print("should let next person in")
             status = await self.let_next_person_in(owner)
             if status == Lloid.QueueEmpty:
-                print("queue apparently empty")
                 await asyncio.sleep(poll_sleep_interval)
                 continue
             elif status == Lloid.AlreadyClosed:
