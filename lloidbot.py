@@ -131,12 +131,36 @@ class Lloid(discord.Client):
             if owner in self.sleepers:
                 del self.sleepers[owner]
 
+    async def handle_queueinfo(self, message):
+        guest = message.author.id
+        if guest not in self.market.queue.requesters:
+            await message.channel.send("You don't seem to be queued up for anything. It could also be that the code got sent to you just now. Please check your DMs.")
+            return
+        owner = self.market.queue.requesters[guest]
+        q = self.market.queue.queues[owner]
+        qsize = q.qsize()
+        index = -1
+        try:
+            index = [qq[0] for qq in list(q.queue)].index(guest)
+        except:
+            pass
+        
+        if index < 0:
+            await message.channel.send("You don't seem to be queued up for anything.")
+        else:
+            timeleft = index * queue_interval
+            await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes; may be greater or lesser depending on how quickly people finish their business on the island). Remaining people in whole queue: %d." % (timeleft//60, queue_interval//60, qsize))
+
     async def on_message(self, message):
         # Lloid should not respond to self
         if message.author == client.user:
             return
 
-        if isinstance(message.channel, discord.DMChannel): 
+        if isinstance(message.channel, discord.DMChannel):
+            if message.content == "!queueinfo":
+                await self.handle_queueinfo(message)
+                return
+
             command = Command(message.content)
             if command.status == Command.Successful:
                 if command.cmd == Command.Close:
@@ -146,7 +170,6 @@ class Lloid(discord.Client):
                         for d in denied:
                             await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
                         await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
-                        # await self.associated_message[message.author.id].unpin()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
                 elif command.cmd == Command.Done:
@@ -162,7 +185,6 @@ class Lloid(discord.Client):
                         
                         turnip = self.market.get(message.author.id)
                         msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
-                        # await msg.pin()
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg
@@ -183,28 +205,10 @@ class Lloid(discord.Client):
         else:
             await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
-    
+
     async def public_message_handler(self, message):
         if message.content == "!queueinfo":
-            guest = message.author.id
-            if guest not in self.market.queue.requesters:
-                await message.channel.send("You don't seem to be queued up for anything. It could also be that the code got sent to you just now. Please check your DMs.")
-                return
-            owner = self.market.queue.requesters[guest]
-            q = self.market.queue.queues[owner]
-            qsize = q.qsize()
-            index = -1
-            try:
-                index = [qq[0] for qq in list(q.queue)].index(guest)
-            except:
-                pass
-            
-            if index < 0:
-                await message.channel.send("You don't seem to be queued up for anything.")
-            else:
-                timeleft = index * queue_interval
-                await message.channel.send("Approximate time left for you: %d minutes (margin of error: %d minutes; may be greater or lesser depending on how quickly people finish their business on the island). Remaining people in whole queue: %d." % (timeleft//60, queue_interval//60, qsize))
-
+            await self.handle_queueinfo(message)
 
 client = Lloid()
 with open("secret") as f:
