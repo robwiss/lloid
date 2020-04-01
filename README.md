@@ -12,7 +12,7 @@ Running:
    These are the following:
      - TOKEN: The bot's token, which can be found [here](https://discordapp.com/developers/applications)
      - ANNOUNCE_ID: The ID of the channel to post price announcements in. These can by obtained by right-clicking the channel and selecting "Copy ID"
-     - QUEUE_INTERVAL: The amount of seconds it takes for one position in the queue to resolve. If not set, it will default to 300 seconds.
+     - QUEUE_INTERVAL: The amount of seconds it takes for one position in the queue to resolve. If not set, it will default to 600 seconds.
 5. Run lloidbot.py
 
 Tweaking:
