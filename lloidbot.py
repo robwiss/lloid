@@ -135,7 +135,7 @@ class Lloid(discord.Client):
         if len(q) > 0:
             next_in_line = self.get_user(q[0])
             if next_in_line is not None:
-                next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
+                await next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
             print("%s has departed for %s's island" % (next_in_line.name, task[1].name))
         self.recently_departed[task[0]] = owner
 
