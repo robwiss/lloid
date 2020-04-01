@@ -6,14 +6,18 @@ A lot of code was ported over from an IRC bot I made that tracked turnip prices,
 
 Running:
 1. You'll need Python 3.5 at minimum (I haven't tested it on that; I'm on 3.6.9).
-2. Install discord.py.
-3. On the platform you want to run it, place lloidbot.py, turnips.py, and a file called 'secret'
-4. The secret file just contains your secret key for your Discord bot.
+2. Install the dependencies using `pip install -r requirements.txt`.
+3. On the platform you want to run it, place lloidbot.py, turnips.py, and a file called `.env`
+4. The .env file contains a set of config variables that are used to run the bot.  
+   These are the following:
+     - TOKEN: The bot's token, which can be found [here](https://discordapp.com/developers/applications)
+     - ANNOUNCE_ID: The ID of the channel to post price announcements in. These can by obtained by right-clicking the channel and selecting "Copy ID"
+     - QUEUE_INTERVAL: The amount of seconds it takes for one position in the queue to resolve. If not set, it will default to 600 seconds.
 5. Run lloidbot.py
 
 Tweaking:
-I haven't made this thing highly configurable but you can change the queue delay time by changing queue_interval in lloidbot.py to the number of seconds you want.
-The channel it joins is #turnips; just search through lloidbot.py to find where you can change that. I, uh, haven't supported it being on multiple channels or Discords yet.
+I haven't made this thing highly configurable but you can change the queue delay time by changing the env variable `QUEUE_INTERVAL` to the number of seconds you want.
+The channel it joins is based on the env variable `ANNOUNCE_ID`. I, uh, haven't supported it being on multiple channels or Discords yet.
 The bot can pin and unpin listings, but I haven't actually tested this out because it doesn't have permissions to do so on the Discord I'm on. Just comment out those lines if you wanna give it a try.
 
 Usage:

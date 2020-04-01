@@ -4,6 +4,8 @@ import sqlite3
 import turnips
 import asyncio
 import sys
+from dotenv import load_dotenv
+import os
 
 queue = []
 queue_interval = 60*10
@@ -82,9 +84,8 @@ class Lloid(discord.Client):
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        self.report_channel = discord.utils.get(self.get_all_channels(), name='turnip-bot')
+        self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
         self.chan = 'global'
-        # await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
         self.market = turnips.StalkMarket(self.db)
         self.associated_user = {} # message id -> id of the user the message is about
@@ -284,6 +285,20 @@ class Lloid(discord.Client):
         if message.content == "!queueinfo":
             await self.handle_queueinfo(message)
 
-client = Lloid()
-with open("secret") as f:
-    client.run(f.readline())
+if __name__ == "__main__":
+    load_dotenv()
+    token = os.getenv("TOKEN")
+    interval = os.getenv("QUEUE_INTERVAL")
+
+    if not token:
+        raise Exception('TOKEN env variable is not defined')
+
+    if not os.getenv("ANNOUNCE_ID"):
+        raise Exception('ANNOUNCE_ID env variable is not defined')
+
+    if interval:
+        queue_interval = int(interval)
+        print(f"Set interval to {interval}")
+
+    client = Lloid()
+    client.run(token)
