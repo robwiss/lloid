@@ -12,13 +12,13 @@ poll_sleep_interval = 5
 class Command:
     Successful = 0
     Error = 1
-    QueueInfo = 2
-    Pause = 3
-    Next = 4
 
     # Command types
     Close = 2
     Done = 3
+    QueueInfo = 4
+    Pause = 5
+    Next = 6
 
     def __init__(self, command):
         print(command.strip().lower())
@@ -222,8 +222,8 @@ class Lloid(discord.Client):
                     return
                 elif command.cmd == Command.Next:
                     self.requested_pauses[message.author.id] = 0
-                    self.let_next_person_in(message.author.id)
-                    self.reset_sleep(message.author.id)
+                    await self.let_next_person_in(message.author.id)
+                    await self.reset_sleep(message.author.id)
                     return
                 elif command.cmd == Command.Close:
                     if message.author.id not in self.market.queue.queues:
