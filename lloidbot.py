@@ -49,7 +49,7 @@ class Command:
                 self.status = Command.Error
                 return
             if len(commands) > 1:
-                if not re.match(r'[A-HJ-NP-Y0-9]{5}', commands[1]):
+                if not re.match(r'[A-HJ-NP-Y0-9]{5}', commands[1], re.IGNORECASE):
                     self.status = Command.Error
                     return
                 self.dodo = commands[1]
