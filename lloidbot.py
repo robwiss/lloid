@@ -143,8 +143,9 @@ class Lloid(discord.Client):
                     if status == turnips.Status.SUCCESS:
                         for d in denied:
                             await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
-                        await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
+                        # await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
                         # await self.associated_message[message.author.id].unpin()
+                        await self.associated_message[message.author.id].delete()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
                 elif command.cmd == Command.Done:
