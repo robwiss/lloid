@@ -188,7 +188,7 @@ class Queue:
     def new_queue(self, owner):
         if owner in self.queues:
             return Status.ALREADY_OPEN
-            
+
         self.queues[owner] = queue.Queue()
 
         return Status.SUCCESS
@@ -237,7 +237,8 @@ class Queue:
         leftovers = []
         while not q.empty():
             r = q.get()[0]
-            leftovers += [r]
+            if owner not in self.stale or r not in self.stale[owner]:
+                leftovers += [r]
             if r in self.requesters:
                 del self.requesters[r]
 

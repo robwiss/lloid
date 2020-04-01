@@ -97,6 +97,21 @@ class TestQueue(unittest.TestCase):
         assert 102 in remaining
 
     @freezegun.freeze_time(tuesday_morning)
+    def test_close_doesnt_include_stale_requesters(self):
+        self.insert_sample_rows()
+        self.market.request(100, bella.id)
+        self.market.request(101, bella.id)
+        self.market.request(102, bella.id)
+
+        self.market.forfeit(101)
+
+        remaining, status = self.market.close(bella.id)
+        assert status == Status.SUCCESS
+        assert len(remaining) == 2, len(remaining)
+        assert 100 in remaining
+        assert 102 in remaining
+
+    @freezegun.freeze_time(tuesday_morning)
     def test_forfeit(self):
         self.insert_sample_rows()
         self.market.request(100, bella.id)
