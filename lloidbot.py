@@ -116,10 +116,10 @@ class Lloid(discord.Client):
         try:
             task = self.market.next(owner)
         except:
-            return Lloid.QueueEmpty, None
+            return Lloid.QueueEmpty
         if task is None: # Then the owner closed
             print("Closed queue for %s" % owner)
-            return Lloid.AlreadyClosed, None
+            return Lloid.AlreadyClosed
 
         await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
         q = list(self.market.queue.queues[owner].queue)
@@ -128,26 +128,41 @@ class Lloid(discord.Client):
             if next_in_line is not None:
                 next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
             print("%s has departed for %s's island" % (next_in_line.name, task[1].name))
-        return Lloid.Successful, task
+        self.recently_departed[task[0]] = owner
 
+        return Lloid.Successful
+
+    async def reset_sleep(self, owner):
+        if owner in self.sleepers:
+            self.sleepers[owner].cancel()
+        self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
+
+        try:
+            await self.sleepers[owner]
+        except:
+            pass
+
+        if owner in self.sleepers: # not yet sure why sometimes owner is not in self.sleepers
+            del self.sleepers[owner]
+        
     async def queue_manager(self, owner):
         while True:
-            status, task = await self.let_next_person_in(owner)
+            # pauses should go here because the queue might be empty when the owner calls pause
+            # if it's empty when that happens, then it never reaches the reset_sleep call at the end.
+            # we can't move that reset_sleep call up here because that means it would sleep before handing
+            # out the first code.
+            while owner in self.requested_pauses[owner] and self.requested_pauses[owner] > 0:
+                self.requested_pauses[owner] -= 1
+                self.reset_sleep(owner)
+
+            status = await self.let_next_person_in(owner)
             if status == Lloid.QueueEmpty:
                 await asyncio.sleep(poll_sleep_interval)
                 continue
             elif status == Lloid.AlreadyClosed:
                 break
 
-            self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
-            self.recently_departed[task[0]] = owner
-            print("%s just departed for %s" % (task[0], owner))
-            try:
-                await self.sleepers[owner]
-            except:
-                pass
-            if owner in self.sleepers:
-                del self.sleepers[owner]
+            await self.reset_sleep(owner)
 
     async def handle_queueinfo(self, message):
         guest = message.author.id
@@ -181,6 +196,16 @@ class Lloid(discord.Client):
                 if command.cmd == Command.QueueInfo:
                     await self.handle_queueinfo(message)
                     return
+                elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
+                    if message.author.id not in self.requested_pauses:
+                        self.requested_pauses[message.author.id] = 0
+                    self.requested_pauses[message.author.id] += 1
+                    return
+                elif command.cmd == Command.Next:
+                    self.requested_pauses[message.author.id] = 0
+                    self.let_next_person_in(message.author.id)
+                    self.reset_sleep(message.author.id)
+                    return
                 elif command.cmd == Command.Close:
                     if message.author.id not in self.market.queue.queues:
                         await message.channel.send("You don't seem to have a market open.")
@@ -195,6 +220,7 @@ class Lloid(discord.Client):
                         await self.associated_message[message.author.id].delete()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
+                        del self.requested_pauses[message.author.id]
                 elif command.cmd == Command.Done:
                     guest = message.author.id
                     owner = self.recently_departed.pop(guest, None)
