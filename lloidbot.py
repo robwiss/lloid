@@ -63,7 +63,7 @@ class Command:
 class Lloid(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        self.report_channel = discord.utils.get(self.get_all_channels(), name='turnips')
+        self.report_channel = discord.utils.get(self.get_all_channels(), name='turnip-bot')
         self.chan = 'global'
         # await self.report_channel.send("I'm online")
         self.db = sqlite3.connect("test.db") 
