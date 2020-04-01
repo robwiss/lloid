@@ -12,6 +12,9 @@ poll_sleep_interval = 5
 class Command:
     Successful = 0
     Error = 1
+    QueueInfo = 2
+    Pause = 3
+    Next = 4
 
     # Command types
     Close = 2
@@ -26,6 +29,10 @@ class Command:
         elif command.strip().lower() == "done":
             self.status = Command.Successful
             self.cmd = Command.Done
+            return
+        elif command.strip().lower() == "!queueinfo":
+            self.status = Command.Successful
+            self.cmd = Command.QueueInfo
             return
 
         self.price = None
@@ -61,6 +68,10 @@ class Command:
         
 
 class Lloid(discord.Client):
+    Successful = 0
+    AlreadyClosed = 1
+    QueueEmpty = 2
+
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
         self.report_channel = discord.utils.get(self.get_all_channels(), name='turnip-bot')
@@ -72,6 +83,7 @@ class Lloid(discord.Client):
         self.associated_message = {} # reverse mapping of the above
         self.sleepers = {}
         self.recently_departed = {}
+        self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -99,25 +111,33 @@ class Lloid(discord.Client):
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
                 await user.send("Removed you from the queue.")
 
+    async def let_next_person_in(self, owner):
+        task = None
+        try:
+            task = self.market.next(owner)
+        except:
+            return Lloid.QueueEmpty, None
+        if task is None: # Then the owner closed
+            print("Closed queue for %s" % owner)
+            return Lloid.AlreadyClosed, None
+
+        await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
+        q = list(self.market.queue.queues[owner].queue)
+        if len(q) > 0:
+            next_in_line = self.get_user(q[0])
+            if next_in_line is not None:
+                next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
+            print("%s has departed for %s's island" % (next_in_line.name, task[1].name))
+        return Lloid.Successful, task
+
     async def queue_manager(self, owner):
         while True:
-            task = None
-            try:
-                task = self.market.next(owner)
-            except:
+            status, task = await self.let_next_person_in(owner)
+            if status == Lloid.QueueEmpty:
                 await asyncio.sleep(poll_sleep_interval)
                 continue
-            if task is None: # Then the owner closed
-                print("Closed queue for %s" % owner)
+            elif status == Lloid.AlreadyClosed:
                 break
-
-            await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
-            q = list(self.market.queue.queues[owner].queue)
-            if len(q) > 0:
-                next_in_line = self.get_user(q[0])
-                if next_in_line is not None:
-                    next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
-                print(q[0])
 
             self.sleepers[owner] = self.loop.create_task(asyncio.sleep(queue_interval))
             self.recently_departed[task[0]] = owner
@@ -155,13 +175,16 @@ class Lloid(discord.Client):
             return
 
         if isinstance(message.channel, discord.DMChannel):
-            if message.content == "!queueinfo":
-                await self.handle_queueinfo(message)
-                return
-
             command = Command(message.content)
+
             if command.status == Command.Successful:
-                if command.cmd == Command.Close:
+                if command.cmd == Command.QueueInfo:
+                    await self.handle_queueinfo(message)
+                    return
+                elif command.cmd == Command.Close:
+                    if message.author.id not in self.market.queue.queues:
+                        await message.channel.send("You don't seem to have a market open.")
+                        return
                     await message.channel.send("Thanks for responsibly closing your doors! I'll give my condolences to the people still in line, if any.")
                     denied, status = self.market.close(message.author.id)
                     if status == turnips.Status.SUCCESS:
