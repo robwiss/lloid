@@ -239,7 +239,8 @@ class Lloid(discord.Client):
                         await self.associated_message[message.author.id].delete()
                         del self.associated_user[self.associated_message[message.author.id].id]
                         del self.associated_message[message.author.id]
-                        del self.requested_pauses[message.author.id]
+                        if message.author.id in self.requested_pauses:
+                            del self.requested_pauses[message.author.id]
                 elif command.cmd == Command.Done:
                     guest = message.author.id
                     owner = self.recently_departed.pop(guest, None)
