@@ -135,8 +135,8 @@ class Lloid(discord.Client):
         q = list(self.market.queue.queues[owner].queue)
         print("remainder in queue = %d" % len(q))
         if len(q) > 0:
-            print("looking up %s" % q[0])
-            next_in_line = self.get_user(q[0])
+            print("looking up %s" % q[0][0])
+            next_in_line = self.get_user(q[0][0])
             if next_in_line is not None:
                 print("sending warning")
                 await next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly! (5 minutes or less)" % task[1].name)
