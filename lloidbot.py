@@ -91,7 +91,7 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code. Also, a lot of people might be ahead of you, so please just go in, do the one thing you're there for, and leave. If you're there to sell turnips, don't look for Saharah or shop at Nook's!" % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, requeue and use the bot as a flow control mechanism, even if you already know the code. Also, a lot of people might be ahead of you, so please just go in, do the one thing you're there for, and leave. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, DO NOT USE the minus (-) button to exit! There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
@@ -153,7 +153,8 @@ class Lloid(discord.Client):
                     guest = message.author.id
                     if guest in self.recently_departed:
                         owner = self.recently_departed[guest]
-                        self.sleepers[owner].cancel()
+                        if owner in self.sleepers:
+                            self.sleepers[owner].cancel()
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
