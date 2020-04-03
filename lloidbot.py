@@ -85,7 +85,7 @@ class Lloid(discord.Client):
     QueueEmpty = 2
 
     async def on_ready(self):
-        print('Logged on as {0}!'.format(self.user))
+        print(f'Logged on as {self.user}!')
         self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
         self.chan = 'global'
         self.db = sqlite3.connect("test.db")
@@ -101,7 +101,7 @@ class Lloid(discord.Client):
         if user == client.user or reaction.message.author != client.user:
             return
         if reaction.emoji == '🦝':
-            print("%s reacted with raccoon" % user.name)
+            print(f"{user.name} reacted with raccoon")
             await self.queue_user(reaction, user)
 
     async def queue_user(self, reaction, user):
@@ -138,7 +138,7 @@ class Lloid(discord.Client):
         except:
             return Lloid.QueueEmpty
         if task is None:  # Then the owner closed
-            print("Closed queue for %s" % owner)
+            print(f"Closed queue for {owner}")
             return Lloid.AlreadyClosed
 
         print(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
