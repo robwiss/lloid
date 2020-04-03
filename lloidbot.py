@@ -268,8 +268,7 @@ class Lloid(discord.Client):
                         self.sleepers[owner].cancel()
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
-                    res = self.market.declare(
-                        message.author.id, message.author.name, command.price, command.dodo, command.tz)
+                    res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS or res == turnips.Status.ALREADY_OPEN:
                         await message.channel.send(("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
                         "You can update the dodo code with the normal syntax. "
