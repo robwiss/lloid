@@ -114,7 +114,13 @@ class Lloid(discord.Client):
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send(f"Queued you up for a dodo code. Estimated time: {interval_s}-{interval_e} minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!")
+                await user.send((f"Queued you up for a dodo code. Estimated time: {interval_s}-{interval_e} minutes, give or take. "
+                "If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up.\n\n"
+                "In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. "
+                "However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. "
+                "Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. "
+                "If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** "
+                "There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!"))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
@@ -136,7 +142,8 @@ class Lloid(discord.Client):
             return Lloid.AlreadyClosed
 
         print(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
-        await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **{task[1].dodo}**.")
+        await self.get_user(task[0]).send((f"Hope you enjoy your trip to **{task[1].name}**'s island! Be polite, observe social distancing, "
+        f"leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **{task[1].dodo}**."))
         q = list(self.market.queue.queues[owner].queue)
         print(f"remainder in queue = {len(q)}")
         if len(q) > 0:
@@ -144,7 +151,8 @@ class Lloid(discord.Client):
             next_in_line = self.get_user(q[0][0])
             if next_in_line is not None:
                 print("sending warning")
-                await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly!")
+                await next_in_line.send((f"Your flight to **{task[1].name}**'s island is boarding soon! "
+                "Please have your tickets ready, we'll be calling you in shortly!"))
         print(
             f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
         self.recently_departed[task[0]] = owner
@@ -194,7 +202,8 @@ class Lloid(discord.Client):
     async def handle_queueinfo(self, message):
         guest = message.author.id
         if guest not in self.market.queue.requesters:
-            await message.channel.send("You don't seem to be queued up for anything. It could also be that the code got sent to you just now. Please check your DMs.")
+            await message.channel.send(("You don't seem to be queued up for anything. "
+            "It could also be that the code got sent to you just now. Please check your DMs."))
             return
         owner = self.market.queue.requesters[guest]
         q = self.market.queue.queues[owner]
@@ -224,7 +233,8 @@ class Lloid(discord.Client):
                     await self.handle_queueinfo(message)
                     return
                 elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
-                    await message.channel.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. You can cancel this by letting the next person in with **next**.")
+                    await message.channel.send((f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
+                    "You can cancel this by letting the next person in with **next**."))
                     if message.author.id not in self.requested_pauses:
                         self.requested_pauses[message.author.id] = 0
                     self.requested_pauses[message.author.id] += 1
@@ -261,27 +271,36 @@ class Lloid(discord.Client):
                     res = self.market.declare(
                         message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS or res == turnips.Status.ALREADY_OPEN:
-                        await message.channel.send(f"Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
+                        await message.channel.send(("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
+                        "You can update the dodo code with the normal syntax. "
+                        f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
+                        "You can also let the next person in and reset the timer to normal by messaging me \"**next**\"."))
 
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(f'>>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. React to this message with 🦝 to be queued up for a code.')
+                        msg = await self.report_channel.send((f'>>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. '
+                        f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. React to this message with 🦝 to be queued up for a code.'))
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg
 
                         self.loop.create_task(self.queue_manager(message.author.id))
                     elif res == turnips.Status.TIMEZONE_REQUIRED:
-                        await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
+                        await message.channel.send(("This seems to be your first time setting turnips, "
+                        "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want."))
                     elif res == turnips.Status.PRICE_REQUIRED:
                         await message.channel.send("You'll need to tell us how much the turnips are at least.")
                     elif res == turnips.Status.DODO_REQUIRED:
-                        await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
+                        await message.channel.send(("This seems to be your first time setting turnips, "
+                        "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want."))
                     elif res == turnips.Status.ITS_SUNDAY:
                         await message.channel.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
                     elif res == turnips.Status.CLOSED:
-                        await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
+                        await message.channel.send(("That doesn't sound right. The Nooklings should be closed at this time. "
+                        "If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times."))
             else:
-                await message.channel.send('Usage: "[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8]"\n\n The quotes (") and square brackets ([]) are not part of the input!\n\nExample usage: `123 C0FEE 8`')
+                await message.channel.send(('Usage: "[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8]"\n\n'
+                'The quotes (") and square brackets ([]) are not part of the input!\n\n'
+                'Example usage: `123 C0FEE 8`'))
         else:
             await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
