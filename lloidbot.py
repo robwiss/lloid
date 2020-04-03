@@ -12,6 +12,7 @@ queue = []
 queue_interval = 60*10
 poll_sleep_interval = 5
 
+
 class Command:
     Successful = 0
     Error = 1
@@ -76,7 +77,7 @@ class Command:
                 except ValueError:
                     self.status = Command.Error
                     return
-        
+
 
 class Lloid(discord.Client):
     Successful = 0
@@ -87,37 +88,39 @@ class Lloid(discord.Client):
         print('Logged on as {0}!'.format(self.user))
         self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
         self.chan = 'global'
-        self.db = sqlite3.connect("test.db") 
+        self.db = sqlite3.connect("test.db")
         self.market = turnips.StalkMarket(self.db)
-        self.associated_user = {} # message id -> id of the user the message is about
-        self.associated_message = {} # reverse mapping of the above
+        self.associated_user = {}  # message id -> id of the user the message is about
+        self.associated_message = {}  # reverse mapping of the above
         self.sleepers = {}
         self.recently_departed = {}
-        self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
+        # owner -> int representing number of requested pauses remaining
+        self.requested_pauses = {}
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
             return
         if reaction.emoji == '🦝':
-            print ("%s reacted with raccoon" % user.name)
+            print("%s reacted with raccoon" % user.name)
             await self.queue_user(reaction, user)
 
     async def queue_user(self, reaction, user):
         if reaction.message.id in self.associated_user:
-            status, size = self.market.request(user.id, self.associated_user[reaction.message.id])
+            status, size = self.market.request(
+                user.id, self.associated_user[reaction.message.id])
             if status:
-                print("queued %s up for %s" % (user.name, self.get_user(self.associated_user[reaction.message.id]).name))
+                print(f"queued {user.name} up for {self.get_user(self.associated_user[reaction.message.id]).name}")
                 if size == 0:
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (interval_s, interval_e))
+                await user.send(f"Queued you up for a dodo code. Estimated time: {interval_s}-{interval_e} minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!")
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
         if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
-            print ("%s unreacted with raccoon" % user.name)
+            print(f"{user.name} unreacted with raccoon")
             waiting_for = self.market.queue.requesters[user.id]
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
                 await user.send("Removed you from the queue.")
@@ -128,27 +131,28 @@ class Lloid(discord.Client):
             task = self.market.next(owner)
         except:
             return Lloid.QueueEmpty
-        if task is None: # Then the owner closed
+        if task is None:  # Then the owner closed
             print("Closed queue for %s" % owner)
             return Lloid.AlreadyClosed
 
-        print("Letting %s in to %s" % (self.get_user(task[0]).name, task[1].name))
-        await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
+        print(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
+        await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **{task[1].dodo}**.")
         q = list(self.market.queue.queues[owner].queue)
-        print("remainder in queue = %d" % len(q))
+        print(f"remainder in queue = {len(q)}")
         if len(q) > 0:
-            print("looking up %s" % q[0][0])
+            print(f"looking up {q[0][0]}")
             next_in_line = self.get_user(q[0][0])
             if next_in_line is not None:
                 print("sending warning")
-                await next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly!" % task[1].name)
-        print("%s has departed for %s's island" % (self.get_user(task[0]).name, task[1].name))
+                await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly!")
+        print(
+            f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
         self.recently_departed[task[0]] = owner
         # await self.associated_message[owner].remove_reaction('🦝', self.get_user(task[0]).id)
 
         print("should have been successful")
         return Lloid.Successful
-    
+
     async def reset_sleep(self, owner):
         print("resetting sleep")
         if owner in self.sleepers:
@@ -162,9 +166,9 @@ class Lloid(discord.Client):
             print("sleep was cancelled")
             pass
 
-        if owner in self.sleepers: # not yet sure why sometimes owner is not in self.sleepers
+        if owner in self.sleepers:  # not yet sure why sometimes owner is not in self.sleepers
             del self.sleepers[owner]
-        
+
     async def queue_manager(self, owner):
         while True:
             # pauses should go here because the queue might be empty when the owner calls pause
@@ -172,7 +176,7 @@ class Lloid(discord.Client):
             # we can't move that reset_sleep call up here because that means it would sleep before handing
             # out the first code.
             while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
-                print("sleeping upon request, %d" % self.requested_pauses[owner])
+                print(f"sleeping upon request, {self.requested_pauses[owner]}")
                 self.requested_pauses[owner] -= 1
                 await self.reset_sleep(owner)
 
@@ -200,11 +204,11 @@ class Lloid(discord.Client):
             index = [qq[0] for qq in list(q.queue)].index(guest)
         except:
             pass
-        
+
         if index < 0:
             await message.channel.send("You don't seem to be queued up for anything.")
         else:
-            await message.channel.send("Your position in the queue is %d in a queue of %d people. Position 0 means you're next." % (index, qsize))
+            await message.channel.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 0 means you're next.")
 
     async def on_message(self, message):
         # Lloid should not respond to self
@@ -212,7 +216,7 @@ class Lloid(discord.Client):
             return
 
         if isinstance(message.channel, discord.DMChannel):
-            print(">>>> (PM) %s: %s" % (message.author.name, message.content) )
+            print(f">>>> (PM) {message.author.name}: {message.content}")
             command = Command(message.content)
 
             if command.status == Command.Successful:
@@ -220,7 +224,7 @@ class Lloid(discord.Client):
                     await self.handle_queueinfo(message)
                     return
                 elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
-                    await message.channel.send("Okay, extending waiting period by another %d minutes. You can cancel this by letting the next person in with **next**." % (queue_interval // 60))
+                    await message.channel.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. You can cancel this by letting the next person in with **next**.")
                     if message.author.id not in self.requested_pauses:
                         self.requested_pauses[message.author.id] = 0
                     self.requested_pauses[message.author.id] += 1
@@ -254,17 +258,18 @@ class Lloid(discord.Client):
                         self.sleepers[owner].cancel()
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
-                    res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
+                    res = self.market.declare(
+                        message.author.id, message.author.name, command.price, command.dodo, command.tz)
                     if res == turnips.Status.SUCCESS or res == turnips.Status.ALREADY_OPEN:
-                        await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by %d minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\"." % ( queue_interval // 60))
-                        
+                        await message.channel.send(f"Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
+
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        msg = await self.report_channel.send(f'>>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. React to this message with 🦝 to be queued up for a code.')
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg
 
-                        self.loop.create_task( self.queue_manager(message.author.id) )
+                        self.loop.create_task(self.queue_manager(message.author.id))
                     elif res == turnips.Status.TIMEZONE_REQUIRED:
                         await message.channel.send("This seems to be your first time setting turnips, so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). The dodo code can be a placeholder if you want.")
                     elif res == turnips.Status.PRICE_REQUIRED:
@@ -276,7 +281,7 @@ class Lloid(discord.Client):
                     elif res == turnips.Status.CLOSED:
                         await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
             else:
-                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8]\"\n\n The quotes (\")and square brackets ([]) are not part of the input!\n\nExample usage: *123 C0FEE 8*")
+                await message.channel.send('Usage: "[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8]"\n\n The quotes (") and square brackets ([]) are not part of the input!\n\nExample usage: `123 C0FEE 8`')
         else:
             await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
@@ -284,6 +289,7 @@ class Lloid(discord.Client):
     async def public_message_handler(self, message):
         if message.content == "!queueinfo":
             await self.handle_queueinfo(message)
+
 
 if __name__ == "__main__":
     load_dotenv()
