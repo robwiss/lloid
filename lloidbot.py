@@ -144,7 +144,7 @@ class Lloid(discord.Client):
                 await next_in_line.send("Your flight to **%s**'s island is boarding soon! Please have your tickets ready, we'll be calling you in shortly!" % task[1].name)
         print("%s has departed for %s's island" % (self.get_user(task[0]).name, task[1].name))
         self.recently_departed[task[0]] = owner
-        await self.associated_message[owner].remove_reaction('🦝', self.get_user(task[0]).id)
+        # await self.associated_message[owner].remove_reaction('🦝', self.get_user(task[0]).id)
 
         print("should have been successful")
         return Lloid.Successful
