@@ -266,7 +266,9 @@ class Lloid(discord.Client):
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
-                    if res == turnips.Status.SUCCESS or res == turnips.Status.ALREADY_OPEN:
+                    if res == turnips.Status.ALREADY_OPEN:
+                        await message.channel.send("Updated your info. Anyone still in line will get the updated codes.")
+                    elif res == turnips.Status.SUCCESS:
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by %d minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\"." % ( queue_interval // 60))
                         
                         turnip = self.market.get(message.author.id)
