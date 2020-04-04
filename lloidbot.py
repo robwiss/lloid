@@ -170,12 +170,12 @@ class Lloid(discord.Client):
             del self.sleepers[owner]
         
     async def queue_manager(self, owner):
+        self.is_paused[owner] = False
         while True:
             # pauses should go here because the queue might be empty when the owner calls pause
             # if it's empty when that happens, then it never reaches the reset_sleep call at the end.
             # we can't move that reset_sleep call up here because that means it would sleep before handing
             # out the first code.
-            self.is_paused[owner] = False
             while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
                 print("sleeping upon request, %d" % self.requested_pauses[owner])
                 self.is_paused[owner] = True
@@ -228,6 +228,7 @@ class Lloid(discord.Client):
                     return
                 elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
                     await message.channel.send("Okay, extending waiting period by another %d minutes. You can cancel this by letting the next person in with **next**." % (queue_interval // 60))
+                    self.is_paused[message.author.id] = True
                     if message.author.id not in self.requested_pauses:
                         self.requested_pauses[message.author.id] = 0
                     self.requested_pauses[message.author.id] += 1
