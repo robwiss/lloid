@@ -5,7 +5,8 @@
 
 Fix bug where trying to update your dodo code instead creates a new listing
 Make bot work on Sundays
-"done" should not work if the host explicitly paused
+/ "done" should not work if the host explicitly paused
+"done" doesn't always work. not sure if this was introduced by the new change above or if the bug was always there. unsure how to reproduce
 
 *** FEATURES THAT CAN BE ADDED LATER ***
 / make !queueinfo work in pms
