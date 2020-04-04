@@ -94,6 +94,7 @@ class Lloid(discord.Client):
         self.sleepers = {}
         self.recently_departed = {}
         self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
+        self.is_paused = {} # owner -> boolean
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -174,10 +175,13 @@ class Lloid(discord.Client):
             # if it's empty when that happens, then it never reaches the reset_sleep call at the end.
             # we can't move that reset_sleep call up here because that means it would sleep before handing
             # out the first code.
+            self.is_paused[owner] = False
             while owner in self.requested_pauses and self.requested_pauses[owner] > 0:
                 print("sleeping upon request, %d" % self.requested_pauses[owner])
+                self.is_paused[owner] = True
                 self.requested_pauses[owner] -= 1
                 await self.reset_sleep(owner)
+            self.is_paused[owner] = False
 
             status = await self.let_next_person_in(owner)
             if status == Lloid.QueueEmpty:
@@ -253,6 +257,9 @@ class Lloid(discord.Client):
                 elif command.cmd == Command.Done:
                     guest = message.author.id
                     owner = self.recently_departed.pop(guest, None)
+                    if owner in self.is_paused and self.is_paused[owner]:
+                        await message.channel.send("Thanks for the heads-up! The queue is actually paused at the moment, so the host will be the one to let the next person in.")
+                        return
                     if owner is not None and owner in self.sleepers:
                         self.sleepers[owner].cancel()
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
