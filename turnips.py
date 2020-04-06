@@ -22,8 +22,7 @@ def current_datetime(offset):
 
 def compute_current_interval(offset):
     local = current_datetime(offset)
-    if local.hour < 8 or local.hour >= 22:
-        return None, None
+
     day_of_week = local.weekday() + 1
     interval = "a"
     #if day_of_week >= 7 or day_of_week <= 0:
@@ -115,9 +114,7 @@ class StalkMarket:
             tz = turnip.gmtoffset
 
         interval, _ = compute_current_interval(tz)
-        if interval is None:
-            return Status.CLOSED
-        elif interval == '7a' or interval == '7b':
+        if interval == '7a' or interval == '7b':
             return Status.ITS_SUNDAY
 
         field = "val" + interval
