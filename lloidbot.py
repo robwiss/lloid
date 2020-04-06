@@ -298,7 +298,7 @@ class Lloid(discord.Client):
                     elif res == turnips.Status.CLOSED:
                         await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
             else:
-                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n The quotes (\")and square brackets ([]) are not part of the input!\n\nExample usage: *123 C0FEE 8*\n\n All arguments are required if you wish to include a description.")
+                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n The quotes (\")and square brackets ([]) are not part of the input!\n\nExample usage: *123 C0FEE 8*\n\n All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you were opening for reasons other than turnips.")
         else:
             await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
