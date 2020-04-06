@@ -51,11 +51,12 @@ class Command:
         self.tz = None
         self.status = Command.Successful
         self.cmd = 0
+        self.description = None
 
         if command is None:
             self.status = Command.Error
             return
-        commands = command.split()
+        commands = command.split(maxsplit=3)
         if len(commands) == 0:
             self.status = Command.Error
             return
@@ -76,6 +77,8 @@ class Command:
                 except ValueError:
                     self.status = Command.Error
                     return
+            if len(commands) > 3:
+                self.description = commands[3]
         
 
 class Lloid(discord.Client):
@@ -95,6 +98,7 @@ class Lloid(discord.Client):
         self.recently_departed = {}
         self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
         self.is_paused = {} # owner -> boolean
+        self.descriptions = {} # owner -> description
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -272,7 +276,12 @@ class Lloid(discord.Client):
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by %d minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\"." % ( queue_interval // 60))
                         
                         turnip = self.market.get(message.author.id)
-                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code." % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p")))
+                        desc = ""
+                        if command.description is not None:
+                            self.descriptions[message.author.id] = command.description
+                            desc = "\n**%s** adds: %s" % (turnip.name, command.description)
+                        
+                        msg = await self.report_channel.send(">>> **%s** has turnips selling for **%d**. Local time: **%s**. React to this message with 🦝 to be queued up for a code. %s" % (turnip.name, turnip.current_price(), turnip.current_time().strftime("%a, %I:%M %p"), desc))
                         await msg.add_reaction('🦝')
                         self.associated_user[msg.id] = message.author.id
                         self.associated_message[message.author.id] = msg
@@ -289,7 +298,7 @@ class Lloid(discord.Client):
                     elif res == turnips.Status.CLOSED:
                         await message.channel.send("That doesn't sound right. The Nooklings should be closed at this time. If you've got something weird going on with your timezone, please add or subtract from your UTC offset to match their times.")
             else:
-                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8]\"\n\n The quotes (\")and square brackets ([]) are not part of the input!\n\nExample usage: *123 C0FEE 8*")
+                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n The quotes (\")and square brackets ([]) are not part of the input!\n\nExample usage: *123 C0FEE 8*\n\n All arguments are required if you wish to include a description.")
         else:
             await self.public_message_handler(message)
             # await message.channel.send("Please message Lloid directly with your turnip prices! %s" % message.channel)
