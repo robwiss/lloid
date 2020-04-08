@@ -238,11 +238,14 @@ class Lloid(discord.Client):
                     self.requested_pauses[message.author.id] += 1
                     return
                 elif command.cmd == Command.Next:
-                    await message.channel.send("Okay, letting the next person in.")
-                    self.requested_pauses[message.author.id] = 0
-                    await self.let_next_person_in(message.author.id)
-                    await self.reset_sleep(message.author.id)
-                    return
+                    if self.market.has_listing(message.author.id):
+                        await message.channel.send("Okay, letting the next person in.")
+                        self.requested_pauses[message.author.id] = 0
+                        await self.let_next_person_in(message.author.id)
+                        await self.reset_sleep(message.author.id)
+                        return
+                    else:
+                        await message.channel.send("Nice try.")
                 elif command.cmd == Command.Close:
                     if message.author.id not in self.market.queue.queues:
                         await message.channel.send("You don't seem to have a market open.")

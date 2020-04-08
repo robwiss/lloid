@@ -77,6 +77,9 @@ class StalkMarket:
 
         self.db.commit()
 
+    def has_listing(self, author):
+        return author in self.queue.queues
+
     def get(self, idx, chan=None):
         results = None
         if chan is not None:
