@@ -87,7 +87,7 @@ class TestTurnips(unittest.TestCase):
     @freezegun.freeze_time(tuesday_evening)
     def test_insert_evening_with_offset(self):
         result = self.market.declare(bella.id, bella.name, 150, bella.dodo, bella.gmtoffset)
-        assert result == Status.CLOSED, result
+        assert result == Status.SUCCESS, result
 
     @freezegun.freeze_time(wednesday_early)
     def test_insert_early_morning_with_offset(self):
@@ -130,7 +130,7 @@ class TestTurnips(unittest.TestCase):
     def test_insert_on_saturday_1159(self):
         self.insert_sample_rows()
         result = self.market.declare(alice.id, alice.name, 150)
-        assert result == Status.CLOSED
+        assert result == Status.SUCCESS
 
 if __name__ == '__main__':
     unittest.main() 
