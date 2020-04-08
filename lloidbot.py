@@ -88,17 +88,19 @@ class Lloid(discord.Client):
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
-        self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
-        self.chan = 'global'
-        self.db = sqlite3.connect("test.db") 
-        self.market = turnips.StalkMarket(self.db)
-        self.associated_user = {} # message id -> id of the user the message is about
-        self.associated_message = {} # reverse mapping of the above
-        self.sleepers = {}
-        self.recently_departed = {}
-        self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
-        self.is_paused = {} # owner -> boolean
-        self.descriptions = {} # owner -> description
+        if self.initialized is None or not self.initialized:
+            self.initialized = True
+            self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
+            self.chan = 'global'
+            self.db = sqlite3.connect("test.db") 
+            self.market = turnips.StalkMarket(self.db)
+            self.associated_user = {} # message id -> id of the user the message is about
+            self.associated_message = {} # reverse mapping of the above
+            self.sleepers = {}
+            self.recently_departed = {}
+            self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
+            self.is_paused = {} # owner -> boolean
+            self.descriptions = {} # owner -> description
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -318,6 +320,7 @@ class Lloid(discord.Client):
             await self.handle_queueinfo(message)
 
 if __name__ == "__main__":
+    print ("Starting Lloid...")
     load_dotenv()
     token = os.getenv("TOKEN")
     interval = os.getenv("QUEUE_INTERVAL")
@@ -333,4 +336,5 @@ if __name__ == "__main__":
         print(f"Set interval to {interval}")
 
     client = Lloid()
+    client.initialized = False
     client.run(token)
