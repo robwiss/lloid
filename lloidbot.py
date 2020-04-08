@@ -139,7 +139,7 @@ class Lloid(discord.Client):
 
         print("Letting %s in to %s" % (self.get_user(task[0]).name, task[1].name))
         await self.get_user(task[0]).send("Hope you enjoy your trip to **%s**'s island! Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. The Dodo code is **%s**." % (task[1].name, task[1].dodo))
-        q = list(self.market.queue.queues[owner].queue)
+        q = self.market.queue.queues[owner]
         print("remainder in queue = %d" % len(q))
         if len(q) > 0:
             print("looking up %s" % q[0][0])
@@ -205,10 +205,10 @@ class Lloid(discord.Client):
             return
         owner = self.market.queue.requesters[guest]
         q = self.market.queue.queues[owner]
-        qsize = q.qsize()
+        qsize = len(q)
         index = -1
         try:
-            index = [qq[0] for qq in list(q.queue)].index(guest)
+            index = [qq[0] for qq in q].index(guest)
         except:
             pass
         

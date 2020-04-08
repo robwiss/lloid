@@ -95,7 +95,7 @@ class StalkMarket:
         r = self.queue.request(requester, owner)
         if not r:
             return False, None
-        return True, self.queue.queues[owner].qsize()
+        return True, len(self.queue.queues[owner])
 
     def forfeit(self, requester):
         return self.queue.forfeit(requester)
@@ -179,14 +179,13 @@ class Queue:
     def __init__(self, market):
         self.market = market
         self.queues = {}
-        self.requesters = {}
-        self.stale = {}
+        self.requesters = {} # person requesting access -> owner they're requesting for
     
     def new_queue(self, owner):
         if owner in self.queues:
             return Status.ALREADY_OPEN
 
-        self.queues[owner] = queue.Queue()
+        self.queues[owner] = []
 
         return Status.SUCCESS
 
@@ -197,50 +196,50 @@ class Queue:
         
         if owner not in self.queues:
             return False
-        self.queues[owner].put((guest, owner))
+        self.queues[owner] += [(guest, owner)]
 
         return True
 
     def forfeit(self, guest):
         if guest not in self.requesters:
             return False
-
         owner = self.requesters[guest]
-        del self.requesters[guest]
 
-        if owner not in self.stale:
-            self.stale[owner] = []
-        self.stale[owner] += [guest]
+        while (guest, owner) in self.queues[owner]:
+            self.queues[owner].remove( (guest, owner) )
+
+        while guest in self.requesters:
+            del self.requesters[guest]
 
         return True
 
     def next(self, owner):
-        q = self.queues[owner].get(block=False)
-        while q is not None and owner in self.stale and q[0] in self.stale[owner]:
-            self.stale[owner].remove(q[0])
-            q = self.queues[owner].get(block=False)
-            
+        if owner not in self.queues or len(self.queues[owner]) == 0:
+            return None
+        q = self.queues[owner].pop(0)
+
         if q is None:
             return None
-        
-        del self.requesters[q[0]]
-        return (q[0], self.market.get(q[1]))
+        guest, _ = q
+
+        while guest in self.requesters:        
+            del self.requesters[guest]
+
+        return (guest, self.market.get(owner))
 
     def close(self, owner):
         if owner not in self.queues:
             return None, Status.ALREADY_CLOSED
         q = self.queues[owner]
+        remaining = [qq[0] for qq in q]
 
-        leftovers = []
-        while not q.empty():
-            r = q.get()[0]
-            if owner not in self.stale or r not in self.stale[owner]:
-                leftovers += [r]
-            if r in self.requesters:
-                del self.requesters[r]
+        while len(q) > 0:
+            g, _ = q.pop(0)
+            while g in self.requesters:
+                del self.requesters[g]
 
-        self.queues[owner].put(None)
+        self.queues[owner] += [None]
         del self.queues[owner]
 
-        return leftovers, Status.SUCCESS
+        return remaining, Status.SUCCESS
     
