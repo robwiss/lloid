@@ -177,6 +177,7 @@ class Status:
     CLOSED = 5
     ALREADY_CLOSED = 6
     ALREADY_OPEN = 7
+    QUEUE_EMPTY = 8
 
 class Queue:
     def __init__(self, market):
@@ -217,18 +218,21 @@ class Queue:
         return True
 
     def next(self, owner):
-        if owner not in self.queues or len(self.queues[owner]) == 0:
-            return None
+        if owner not in self.queues:
+            return None, Status.ALREADY_CLOSED
+        elif len(self.queues[owner]) == 0:
+            return None, Status.QUEUE_EMPTY
+        
         q = self.queues[owner].pop(0)
 
         if q is None:
-            return None
+            return None, Status.ALREADY_CLOSED
         guest, _ = q
 
         while guest in self.requesters:        
             del self.requesters[guest]
 
-        return (guest, self.market.get(owner))
+        return (guest, self.market.get(owner)), Status.SUCCESS
 
     def close(self, owner):
         if owner not in self.queues:

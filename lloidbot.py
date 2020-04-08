@@ -89,6 +89,7 @@ class Lloid(discord.Client):
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
         if self.initialized is None or not self.initialized:
+            print("Initializing.")
             self.initialized = True
             self.report_channel = self.get_channel(int(os.getenv("ANNOUNCE_ID")))
             self.chan = 'global'
@@ -131,11 +132,10 @@ class Lloid(discord.Client):
 
     async def let_next_person_in(self, owner):
         task = None
-        try:
-            task = self.market.next(owner)
-        except:
+        task, status = self.market.next(owner)
+        if status == turnips.Status.QUEUE_EMPTY:
             return Lloid.QueueEmpty
-        if task is None: # Then the owner closed
+        elif status == turnips.Status.ALREADY_CLOSED: # Then the owner closed
             print("Closed queue for %s" % owner)
             return Lloid.AlreadyClosed
 
@@ -191,6 +191,7 @@ class Lloid(discord.Client):
 
             status = await self.let_next_person_in(owner)
             if status == Lloid.QueueEmpty:
+                # print("queue seems empty, sleeping then polling again")
                 await asyncio.sleep(poll_sleep_interval)
                 continue
             elif status == Lloid.AlreadyClosed:
@@ -199,6 +200,7 @@ class Lloid(discord.Client):
 
             print("should reset sleep now")
             await self.reset_sleep(owner)
+        print("Exited the loop. This shouldn't be happening!")
 
     async def handle_queueinfo(self, message):
         guest = message.author.id
