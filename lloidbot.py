@@ -102,6 +102,7 @@ class Lloid(discord.Client):
             self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
+        print(f"Sample data to verify data integrity: {self.associated_user}")
 
     async def on_reaction_add(self, reaction, user):
         if user == client.user or reaction.message.author != client.user:
@@ -123,6 +124,9 @@ class Lloid(discord.Client):
                 await user.send("Queued you up for a dodo code for %s. Estimated time: %d-%d minutes, give or take (it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (owner_name, interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
+        else:
+            k = self.associated_user.keys
+            print(f"{reaction.message.id} was not found in {k}")
 
     async def on_reaction_remove(self, reaction, user):
         if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
@@ -131,6 +135,9 @@ class Lloid(discord.Client):
             waiting_for = self.market.queue.requesters[user.id]
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
                 await user.send("Removed you from the queue for %s." % owner_name)
+
+    async def on_disconnect(self):
+        print("Lloid got disconnected.")
 
     async def let_next_person_in(self, owner):
         task = None
@@ -202,7 +209,7 @@ class Lloid(discord.Client):
 
             print("should reset sleep now")
             await self.reset_sleep(owner)
-        print("Exited the loop. This shouldn't be happening!")
+        print("Exited the loop. This can only happen if the queue was closed.")
 
     async def handle_queueinfo(self, message):
         guest = message.author.id
