@@ -165,8 +165,8 @@ class StalkMarket:
             latest = datetime.strptime(t.latest_time, "%Y-%m-%d %H:%M:%S.%f")
             if latest.weekday() > current_datetime(t.gmtoffset).weekday() or (current_datetime(t.gmtoffset) - latest).days > 6:
                 print ("wiping")
-                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, dodo=NULL where nick=?", (t.name,) )
-
+                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, dodo=NULL where id=?", (t.id,) )
+        self.db.commit()
 
 class Status:
     SUCCESS = 0
