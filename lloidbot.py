@@ -114,21 +114,23 @@ class Lloid(discord.Client):
         if reaction.message.id in self.associated_user:
             status, size = self.market.request(user.id, self.associated_user[reaction.message.id])
             if status:
-                print("queued %s up for %s" % (user.name, self.get_user(self.associated_user[reaction.message.id]).name))
+                owner_name = self.get_user(self.associated_user[reaction.message.id]).name
+                print("queued %s up for %s" % (user.name, owner_name))
                 if size == 0:
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
-                await user.send("Queued you up for a dodo code. Estimated time: %d-%d minutes, give or take. If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (interval_s, interval_e))
+                await user.send("Queued you up for a dodo code for %s. Estimated time: %d-%d minutes, give or take (it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up. \n\nIn the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!" % (owner_name, interval_s, interval_e))
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
     async def on_reaction_remove(self, reaction, user):
         if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
             print ("%s unreacted with raccoon" % user.name)
+            owner_name = self.get_user(self.associated_user[reaction.message.id]).name
             waiting_for = self.market.queue.requesters[user.id]
             if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
-                await user.send("Removed you from the queue.")
+                await user.send("Removed you from the queue for %s." % owner_name)
 
     async def let_next_person_in(self, owner):
         task = None
