@@ -279,6 +279,10 @@ class Lloid(discord.Client):
                     if res == turnips.Status.ALREADY_OPEN:
                         await message.channel.send("Updated your info. Anyone still in line will get the updated codes.")
                     elif res == turnips.Status.SUCCESS:
+                        if owner in self.sleepers:
+                            print("Owner has previous outstanding timers. Cancelling them now.")
+                            self.sleepers[owner].cancel()
+                        self.requested_pauses[owner] = 0
                         await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. You can update the dodo code with the normal syntax. Messaging me \"**pause**\" will extend the cooldown timer by %d minutes each time. You can also let the next person in and reset the timer to normal by messaging me \"**next**\"." % ( queue_interval // 60))
                         
                         turnip = self.market.get(message.author.id)
