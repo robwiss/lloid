@@ -104,18 +104,22 @@ class Lloid(discord.Client):
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
 
-    async def on_reaction_add(self, reaction, user):
-        if user == client.user or reaction.message.author != client.user:
-            return
-        if reaction.emoji == '🦝':
-            print ("%s reacted with raccoon" % user.name)
-            await self.queue_user(reaction, user)
+    async def on_raw_reaction_add(self, payload):
+        channel = await client.fetch_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        user = await client.fetch_user(payload.user_id)
 
-    async def queue_user(self, reaction, user):
-        if reaction.message.id in self.associated_user:
-            status, size = self.market.request(user.id, self.associated_user[reaction.message.id])
+        if user == client.user or message.author != client.user:
+            return
+        if payload.emoji.name == '🦝':
+            print ("%s reacted with raccoon" % user.name)
+            await self.queue_user(payload.message_id, user)
+
+    async def queue_user(self, message_id, user):
+        if message_id in self.associated_user:
+            status, size = self.market.request(user.id, self.associated_user[message_id])
             if status:
-                owner_name = self.get_user(self.associated_user[reaction.message.id]).name
+                owner_name = self.get_user(self.associated_user[message_id]).name
                 print("queued %s up for %s" % (user.name, owner_name))
                 if size == 0:
                     size = 1
@@ -125,12 +129,13 @@ class Lloid(discord.Client):
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
 
-    async def on_reaction_remove(self, reaction, user):
-        if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
+    async def on_raw_reaction_remove(self, payload):
+        if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
+            user = await client.fetch_user(payload.user_id)
             print ("%s unreacted with raccoon" % user.name)
-            owner_name = self.get_user(self.associated_user[reaction.message.id]).name
-            waiting_for = self.market.queue.requesters[user.id]
-            if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
+            owner_name = self.get_user(self.associated_user[payload.message_id]).name
+            waiting_for = self.market.queue.requesters[payload.user_id]
+            if waiting_for == self.associated_user[payload.message_id] and self.market.forfeit(payload.user_id):
                 await user.send("Removed you from the queue for %s." % owner_name)
 
     async def let_next_person_in(self, owner):
