@@ -7,6 +7,7 @@ import sys
 from dotenv import load_dotenv
 import os
 import re
+import sentry_sdk
 
 queue = []
 queue_interval = 60*10
@@ -335,12 +336,17 @@ if __name__ == "__main__":
     load_dotenv()
     token = os.getenv("TOKEN")
     interval = os.getenv("QUEUE_INTERVAL")
+    sentry_dsn = os.getenv("SENTRY_DSN")
 
     if not token:
         raise Exception('TOKEN env variable is not defined')
 
     if not os.getenv("ANNOUNCE_ID"):
         raise Exception('ANNOUNCE_ID env variable is not defined')
+
+    if sentry_dsn:
+        sentry_sdk.init(sentry_dsn)
+        print("Connected to Sentry")
 
     if interval:
         queue_interval = int(interval)
