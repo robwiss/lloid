@@ -231,12 +231,15 @@ class Lloid(discord.Client):
                     await self.handle_queueinfo(message)
                     return
                 elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
-                    await message.channel.send("Okay, extending waiting period by another %d minutes. You can cancel this by letting the next person in with **next**." % (queue_interval // 60))
-                    self.is_paused[message.author.id] = True
-                    if message.author.id not in self.requested_pauses:
-                        self.requested_pauses[message.author.id] = 0
-                    self.requested_pauses[message.author.id] += 1
-                    return
+                    if self.market.has_listing(message.author.id):
+                        await message.channel.send("Okay, extending waiting period by another %d minutes. You can cancel this by letting the next person in with **next**." % (queue_interval // 60))
+                        self.is_paused[message.author.id] = True
+                        if message.author.id not in self.requested_pauses:
+                            self.requested_pauses[message.author.id] = 0
+                        self.requested_pauses[message.author.id] += 1
+                        return
+                    else:
+                        await message.channel.send("If you want to move to the back of the line, unqueue and requeue. If you think the island is congested, please tell the host to pause with the same command you just sent.")
                 elif command.cmd == Command.Next:
                     if self.market.has_listing(message.author.id):
                         await message.channel.send("Okay, letting the next person in.")
