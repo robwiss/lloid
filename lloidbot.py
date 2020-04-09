@@ -143,7 +143,7 @@ class Lloid(discord.Client):
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
         else:
             k = self.associated_user.keys
-            print(f"{reaction.message.id} was not found in {k}")
+            print(f"{message_id} was not found in {k}")
 
     async def on_raw_reaction_remove(self, payload):
         if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
