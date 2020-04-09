@@ -7,6 +7,7 @@ import sys
 from dotenv import load_dotenv
 import os
 import re
+import sentry_sdk
 
 queue = []
 queue_interval = 60*10
@@ -103,21 +104,26 @@ class Lloid(discord.Client):
             self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
+        print(f"Sample data to verify data integrity: {self.associated_user}")
 
-    async def on_reaction_add(self, reaction, user):
-        if user == client.user or reaction.message.author != client.user:
+    async def on_raw_reaction_add(self, payload):
+        channel = await client.fetch_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        user = await client.fetch_user(payload.user_id)
+
+        if user == client.user or message.author != client.user:
             return
-        if reaction.emoji == '🦝':
+        if payload.emoji.name == '🦝':
             print(f"{user.name} reacted with raccoon")
-            await self.queue_user(reaction, user)
+            await self.queue_user(payload.message_id, user)
 
-    async def queue_user(self, reaction, user):
-        if reaction.message.id in self.associated_user:
-            status, size = self.market.request(
-                user.id, self.associated_user[reaction.message.id])
+    async def queue_user(self, message_id, user):
+        if message_id in self.associated_user:
+            status, size = self.market.request(user.id, self.associated_user[message_id])
             if status:
-                owner_name = self.get_user(self.associated_user[reaction.message.id]).name
+                owner_name = self.get_user(self.associated_user[message_id]).name
                 print(f"queued {user.name} up for {owner_name}")
+
                 if size == 0:
                     size = 1
                 interval_s = queue_interval * (size - 1) // 60
@@ -131,14 +137,21 @@ class Lloid(discord.Client):
                 "There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!")
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
+        else:
+            k = self.associated_user.keys
+            print(f"{reaction.message.id} was not found in {k}")
 
-    async def on_reaction_remove(self, reaction, user):
-        if reaction.emoji == '🦝' and reaction.message.id in self.associated_user and user.id in self.market.queue.requesters:
+    async def on_raw_reaction_remove(self, payload):
+        if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
+            user = await client.fetch_user(payload.user_id)
             print(f"{user.name} unreacted with raccoon")
-            owner_name = self.get_user(self.associated_user[reaction.message.id]).name
-            waiting_for = self.market.queue.requesters[user.id]
-            if waiting_for == self.associated_user[reaction.message.id] and self.market.forfeit(user.id):
-                await user.send(f"Removed you from the queue for {owner_name}.")
+            owner_name = self.get_user(self.associated_user[payload.message_id]).name
+            waiting_for = self.market.queue.requesters[payload.user_id]
+            if waiting_for == self.associated_user[payload.message_id] and self.market.forfeit(payload.user_id):
+                await user.send("Removed you from the queue for %s." % owner_name)
+
+    async def on_disconnect(self):
+        print("Lloid got disconnected.")
 
     async def let_next_person_in(self, owner):
         task = None
@@ -213,7 +226,7 @@ class Lloid(discord.Client):
 
             print("Should reset sleep now")
             await self.reset_sleep(owner)
-        print("Exited the loop. This shouldn't be happening!")
+        print("Exited the loop. This can only happen if the queue was closed.")
 
     async def handle_queueinfo(self, message):
         guest = message.author.id
@@ -353,12 +366,17 @@ if __name__ == "__main__":
     load_dotenv()
     token = os.getenv("TOKEN")
     interval = os.getenv("QUEUE_INTERVAL")
+    sentry_dsn = os.getenv("SENTRY_DSN")
 
     if not token:
         raise Exception('TOKEN env variable is not defined')
 
     if not os.getenv("ANNOUNCE_ID"):
         raise Exception('ANNOUNCE_ID env variable is not defined')
+
+    if sentry_dsn:
+        sentry_sdk.init(sentry_dsn)
+        print("Connected to Sentry")
 
     if interval:
         queue_interval = int(interval)
