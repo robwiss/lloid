@@ -311,7 +311,9 @@ class Lloid(discord.Client):
                         "The queue is actually paused at the moment, so the host will be the one to let the next person in.")
                         return
                     if owner is not None and owner in self.sleepers:
+                        print("Visitor done, cancelling timer")
                         self.sleepers[owner].cancel()
+                        print("Timer cancelled, thanking visitor")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                     else:
                         print(f"Visitor marked themselves as done, but owner {owner} was not in sleepers")
