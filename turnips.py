@@ -226,7 +226,7 @@ class Queue:
             print(f"owner {name} was not among queues. they must be already closed")
             return None, Status.ALREADY_CLOSED
         elif len(self.queues[owner]) == 0:
-            print(f"{name}'s queue has nobody in it")
+            # print(f"{name}'s queue has nobody in it")
             return None, Status.QUEUE_EMPTY
         
         print(f"{name}'s queue has content")
