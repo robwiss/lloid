@@ -198,6 +198,7 @@ class Lloid(discord.Client):
 
         try:
             await self.sleepers[owner]
+            print("Timeout on last visitor, letting next person in.")
         except:
             print("sleep was cancelled")
             pass
@@ -311,6 +312,9 @@ class Lloid(discord.Client):
                         return
                     if owner is not None and owner in self.sleepers:
                         self.sleepers[owner].cancel()
+                        await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
+                    else:
+                        print(f"Visitor marked themselves as done, but owner {owner} was not in sleepers")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
