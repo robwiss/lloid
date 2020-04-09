@@ -104,6 +104,10 @@ class Lloid(discord.Client):
             self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
+
+            deleted = await self.report_channel.purge(check=lambda m: m.author==client.user)
+            num_del = len(deleted)
+            print(f"Initialized. Deleted {num_del} old messages.")
         print(f"Sample data to verify data integrity: {self.associated_user}")
 
     async def on_raw_reaction_add(self, payload):
