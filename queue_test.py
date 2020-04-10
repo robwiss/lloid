@@ -59,7 +59,7 @@ class TestQueue(unittest.TestCase):
         self.market.request(100, alice.id)
         assert len(self.market.queue.requesters) == 1
         assert len(self.market.queue.queues[alice.id]) == 1
-        n = self.market.next(alice.id)
+        n, _ = self.market.next(alice.id)
         assert n[0] == 100
         assert n[1].id == alice.id
         assert len(self.market.queue.requesters) == 0
@@ -87,8 +87,9 @@ class TestQueue(unittest.TestCase):
         self.market.request(101, bella.id)
         self.market.request(102, bella.id)
 
-        n = self.market.next(bella.id)
-        assert n[0] == 100
+        n, st = self.market.next(bella.id)
+        assert st == Status.SUCCESS
+        assert n[0] == 100, n[0]
 
         remaining, status = self.market.close(bella.id)
         assert status == Status.SUCCESS
@@ -119,14 +120,14 @@ class TestQueue(unittest.TestCase):
         self.market.request(102, bella.id)
         self.market.request(103, bella.id)
 
-        n = self.market.next(bella.id)
+        n, _ = self.market.next(bella.id)
         assert n[0] == 100
 
         assert self.market.forfeit(102)
 
-        n = self.market.next(bella.id)
+        n, _ = self.market.next(bella.id)
         assert n[0] == 101
-        n = self.market.next(bella.id)
+        n, _ = self.market.next(bella.id)
         assert n[0] == 103, n[0]
 
     @freezegun.freeze_time(tuesday_morning)

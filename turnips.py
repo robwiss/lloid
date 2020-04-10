@@ -15,6 +15,8 @@ intervals = {
     "5b": 9,
     "6a": 10,
     "6b": 11,
+    "7a": 12,
+    "7b": 13
 }
 
 def current_datetime(offset):
@@ -70,7 +72,7 @@ class StalkMarket:
         self.queue = Queue(self)
 
     def db_init(self):
-        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, 
+        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b,
                 primary key(chan, id))""")
 
         self.wipe_old_prices()
@@ -83,9 +85,9 @@ class StalkMarket:
     def get(self, idx, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where chan=? and id=?", (chan,idx)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=? and id=?", (chan,idx)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where id=?", (idx,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where id=?", (idx,)).fetchall()
 
         if results is None:
             return []
@@ -117,8 +119,8 @@ class StalkMarket:
             tz = turnip.gmtoffset
 
         interval, _ = compute_current_interval(tz)
-        if interval == '7a' or interval == '7b':
-            return Status.ITS_SUNDAY
+        #if interval == '7a' or interval == '7b':
+        #    return Status.ITS_SUNDAY
 
         field = "val" + interval
 
@@ -148,9 +150,9 @@ class StalkMarket:
     def get_all(self, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where chan=?", (chan,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=?", (chan,)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips ").fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips ").fetchall()
 
         if results is None:
             return []
@@ -165,7 +167,7 @@ class StalkMarket:
             latest = datetime.strptime(t.latest_time, "%Y-%m-%d %H:%M:%S.%f")
             if latest.weekday() > current_datetime(t.gmtoffset).weekday() or (current_datetime(t.gmtoffset) - latest).days > 6:
                 print ("wiping")
-                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, dodo=NULL where id=?", (t.id,) )
+                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, val7a=NULL, val7b=NULL, dodo=NULL where id=?", (t.id,) )
         self.db.commit()
 
 class Status:
