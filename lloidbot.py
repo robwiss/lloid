@@ -316,7 +316,8 @@ class Lloid(discord.Client):
                         print("Timer cancelled, thanking visitor")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                     else:
-                        print(f"Visitor marked themselves as done, but owner {owner} was not in sleepers")
+                        owner_name = self.get_user(owner).name
+                        print(f"Visitor marked themselves as done, but owner {owner_name} was not in sleepers")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
                 else:
                     res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
