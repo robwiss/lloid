@@ -315,7 +315,7 @@ class Lloid(discord.Client):
                         self.sleepers[owner].cancel()
                         print("Timer cancelled, thanking visitor")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
-                    else:
+                    elif owner is not None:
                         owner_name = self.get_user(owner).name
                         print(f"Visitor marked themselves as done, but owner {owner_name} was not in sleepers")
                         await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
