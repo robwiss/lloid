@@ -10,7 +10,8 @@ import re
 import sentry_sdk
 
 queue = []
-queue_interval = 60*10
+queue_interval_minutes = 10
+queue_interval = 60*queue_interval_minutes
 poll_sleep_interval = 5
 
 
@@ -178,7 +179,7 @@ class Lloid(discord.Client):
             if next_in_line is not None:
                 print("Sending warning")
                 await next_in_line.send((f"Your flight to **{task[1].name}**'s island is boarding soon! "
-                "Please have your tickets ready, we'll be calling you in shortly!"))
+                f"Please have your tickets ready, we'll be calling you forward some time in the next 0-{queue_interval_minutes} minutes!"))
         print(f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
         self.recently_departed[task[0]] = owner
         try:
@@ -251,7 +252,8 @@ class Lloid(discord.Client):
         if index < 0:
             await message.channel.send("You don't seem to be queued up for anything.")
         else:
-            await message.channel.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 0 means you're next.")
+            index += 1
+            await message.channel.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you should have gotten a DM to this effect).")
 
     async def on_message(self, message):
         # Lloid should not respond to self
