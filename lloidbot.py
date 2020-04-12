@@ -168,7 +168,7 @@ class Lloid(discord.Client):
 
         print(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
         await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! "
-        "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left.**. "
+        "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left (unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in."
         f"The Dodo code is **{task[1].dodo}**.")
         q = self.market.queue.queues[owner]
         print(f"Remainder in queue = {len(q)}")
