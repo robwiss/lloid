@@ -1,6 +1,9 @@
 import sqlite3
 from datetime import datetime, timedelta
 import queue
+import logging
+
+logger = logging.getLogger('lloid')
 
 intervals = {
     "1a": 0,
@@ -225,24 +228,24 @@ class Queue:
         if t is not None and t != []:
             name = t.name
         if owner not in self.queues:
-            print(f"owner {name} was not among queues. they must be already closed")
+            logger.info(f"owner {name} was not among queues. they must be already closed")
             return None, Status.ALREADY_CLOSED
         elif len(self.queues[owner]) == 0:
             # print(f"{name}'s queue has nobody in it")
             return None, Status.QUEUE_EMPTY
         
-        print(f"{name}'s queue has content")
+        logger.info(f"{name}'s queue has content")
         q = self.queues[owner].pop(0)
 
         if q is None:
-            print(f"{name}'s queue had [None] in it, so start the closing procedure")
+            logger.info(f"{name}'s queue had [None] in it, so start the closing procedure")
             return None, Status.ALREADY_CLOSED
         guest, _ = q
 
         if guest in self.requesters:
             del self.requesters[guest]
 
-        print(f"returning {name}'s next guest'")
+        logger.info(f"returning {name}'s next guest'")
         return (guest, self.market.get(owner)), Status.SUCCESS
 
     def close(self, owner):
