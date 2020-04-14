@@ -265,7 +265,8 @@ class Lloid(discord.Client):
             return
 
         if isinstance(message.channel, discord.DMChannel):
-            logger.info(f">>>> (PM) {message.author.name}: {message.content}")
+            if message.content.strip() != "!queueinfo":
+                logger.info(f">>>> (PM) {message.author.name}: {message.content}")
             command = Command(message.content)
 
             if command.status == Command.Successful:
@@ -385,7 +386,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     verbosity = args.verbose
     log_level = logging.WARNING
-    
+
     if verbosity >= 2:
         log_level = logging.DEBUG
     elif verbosity >= 1:
