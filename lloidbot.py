@@ -257,7 +257,7 @@ class Lloid(discord.Client):
             await message.channel.send("You don't seem to be queued up for anything.")
         else:
             index += 1
-            await message.channel.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you should have gotten a DM to this effect).")
+            await message.channel.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you'll get another DM when you reach this position).")
 
     async def on_message(self, message):
         # Lloid should not respond to self
@@ -371,7 +371,7 @@ class Lloid(discord.Client):
             else:
                 await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
                 "The quotes (\")and square brackets ([]) are not part of the input!\n\n"
-                "Example usage: *123 C0FEE 8*\n\n "
+                "Example usage: *123 C0FEE 8 Brewster is in town selling infinite durability axes*\n\n "
                 "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you were opening for reasons other than turnips.")
         else:
             await self.public_message_handler(message)
