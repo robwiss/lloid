@@ -169,17 +169,17 @@ class Lloid(commands.Bot):
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
 
-            deleted = await self.report_channel.purge(check=lambda m: m.author==client.user)
+            deleted = await self.report_channel.purge(check=lambda m: m.author==self.user)
             num_del = len(deleted)
             logger.info(f"Initialized. Deleted {num_del} old messages.")
         logger.info(f"Sample data to verify data integrity: {self.associated_user}")
 
     async def on_raw_reaction_add(self, payload):
-        channel = await client.fetch_channel(payload.channel_id)
+        channel = await self.fetch_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        user = await client.fetch_user(payload.user_id)
+        user = await self.fetch_user(payload.user_id)
 
-        if user == client.user or message.author != client.user:
+        if user == self.user or message.author != self.user:
             return
         if payload.emoji.name == '🦝':
             logger.debug(f"{user.name} reacted with raccoon")
@@ -212,7 +212,7 @@ class Lloid(commands.Bot):
 
     async def on_raw_reaction_remove(self, payload):
         if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
-            user = await client.fetch_user(payload.user_id)
+            user = await self.fetch_user(payload.user_id)
             logger.debug(f"{user.name} unreacted with raccoon")
             owner_name = self.get_user(self.associated_user[payload.message_id]).name
             waiting_for = self.market.queue.requesters[payload.user_id]
@@ -317,10 +317,7 @@ class Lloid(commands.Bot):
             command = Command(message.content)
 
             if command.status == Command.Successful:
-                if command.cmd == Command.QueueInfo:
-                    await self.handle_queueinfo(message)
-                    return
-                elif command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
+                if command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
                     if self.market.has_listing(message.author.id):
                         await message.channel.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
                         "You can cancel this by letting the next person in with **next**.")
@@ -424,7 +421,7 @@ class Lloid(commands.Bot):
                 "Example usage: *123 C0FEE 8 Brewster is in town selling infinite durability axes*\n\n "
                 "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you were opening for reasons other than turnips.")
 
-if __name__ == "__main__":
+def main(): 
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', '-v', action='count', help='Sets the verbosity level of the logger.', default=0, required=False)
     args = parser.parse_args()
@@ -465,3 +462,6 @@ if __name__ == "__main__":
     client = Lloid()
     client.initialized = False
     client.run(token)
+
+if __name__ == "__main__":
+    main()
