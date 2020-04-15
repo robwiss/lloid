@@ -203,7 +203,8 @@ class Lloid(discord.Client):
 
         try:
             await self.sleepers[owner]
-            logger.info("Timeout on last visitor, letting next person in.")
+            owner_name = self.get_user(owner).name
+            logger.info(f"Timeout on last visitor to {owner_name}, letting next person in.")
         except:
             logger.info("Sleep was cancelled")
             pass
