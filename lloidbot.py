@@ -290,8 +290,11 @@ class Lloid(discord.Client):
                     if self.market.has_listing(message.author.id):
                         await message.channel.send("Okay, letting the next person in.")
                         self.requested_pauses[message.author.id] = 0
-                        await self.let_next_person_in(message.author.id)
-                        await self.reset_sleep(message.author.id)
+                        if message.author.id in self.sleepers:
+                            self.sleepers[message.author.id].cancel()
+                        else:
+                            owner_name = self.get_user(message.author.id).name
+                            logger.debug("{owner_name} tried sending in the next one, but there were no timers to cancel.")
                         return
                     else:
                         await message.channel.send("Nice try.")
