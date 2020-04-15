@@ -6,8 +6,8 @@ from datetime import datetime
 from unittest import mock 
 import freezegun
 
-alice = turnips.Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*12)
-bella = turnips.Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*12)
+alice = turnips.Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*14)
+bella = turnips.Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*14)
 # March 24, 2020 - Tuesday
 tuesday_morning = datetime(2020, 3, 24, 10, 20)
 tuesday_evening = datetime(2020, 3, 24, 21, 20)
@@ -48,10 +48,10 @@ class TestTurnips(unittest.TestCase):
         self.insert_sample_rows()
 
         t = self.market.get(alice.id)
-        assert t.equals(alice)
+        assert t.equals(alice), f"{t} | {alice}"
 
         t = self.market.get(bella.id)
-        assert t.equals(bella)
+        assert t.equals(bella), f"{t} | {bella}"
 
     @freezegun.freeze_time(tuesday_morning)
     def test_insert_new(self):
@@ -118,7 +118,7 @@ class TestTurnips(unittest.TestCase):
     def test_insert_on_sunday(self):
         self.insert_sample_rows()
         result = self.market.declare(alice.id, alice.name, 150)
-        assert result == Status.ITS_SUNDAY
+        assert result == Status.SUCCESS
 
     @freezegun.freeze_time(saturday_evening)
     def test_insert_on_saturday_evening(self):

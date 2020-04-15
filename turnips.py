@@ -1,6 +1,9 @@
 import sqlite3
 from datetime import datetime, timedelta
 import queue
+import logging
+
+logger = logging.getLogger('lloid')
 
 intervals = {
     "1a": 0,
@@ -15,6 +18,8 @@ intervals = {
     "5b": 9,
     "6a": 10,
     "6b": 11,
+    "7a": 12,
+    "7b": 13
 }
 
 def current_datetime(offset):
@@ -70,19 +75,22 @@ class StalkMarket:
         self.queue = Queue(self)
 
     def db_init(self):
-        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, 
+        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b,
                 primary key(chan, id))""")
 
         self.wipe_old_prices()
 
         self.db.commit()
 
+    def has_listing(self, author):
+        return author in self.queue.queues
+
     def get(self, idx, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where chan=? and id=?", (chan,idx)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=? and id=?", (chan,idx)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where id=?", (idx,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where id=?", (idx,)).fetchall()
 
         if results is None:
             return []
@@ -95,7 +103,7 @@ class StalkMarket:
         r = self.queue.request(requester, owner)
         if not r:
             return False, None
-        return True, self.queue.queues[owner].qsize()
+        return True, len(self.queue.queues[owner])
 
     def forfeit(self, requester):
         return self.queue.forfeit(requester)
@@ -114,8 +122,8 @@ class StalkMarket:
             tz = turnip.gmtoffset
 
         interval, _ = compute_current_interval(tz)
-        if interval == '7a' or interval == '7b':
-            return Status.ITS_SUNDAY
+        #if interval == '7a' or interval == '7b':
+        #    return Status.ITS_SUNDAY
 
         field = "val" + interval
 
@@ -145,9 +153,9 @@ class StalkMarket:
     def get_all(self, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips where chan=?", (chan,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=?", (chan,)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b from turnips ").fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips ").fetchall()
 
         if results is None:
             return []
@@ -162,8 +170,8 @@ class StalkMarket:
             latest = datetime.strptime(t.latest_time, "%Y-%m-%d %H:%M:%S.%f")
             if latest.weekday() > current_datetime(t.gmtoffset).weekday() or (current_datetime(t.gmtoffset) - latest).days > 6:
                 print ("wiping")
-                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, dodo=NULL where nick=?", (t.name,) )
-
+                self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, val7a=NULL, val7b=NULL, dodo=NULL where id=?", (t.id,) )
+        self.db.commit()
 
 class Status:
     SUCCESS = 0
@@ -174,19 +182,19 @@ class Status:
     CLOSED = 5
     ALREADY_CLOSED = 6
     ALREADY_OPEN = 7
+    QUEUE_EMPTY = 8
 
 class Queue:
     def __init__(self, market):
         self.market = market
         self.queues = {}
-        self.requesters = {}
-        self.stale = {}
+        self.requesters = {} # person requesting access -> owner they're requesting for
     
     def new_queue(self, owner):
         if owner in self.queues:
             return Status.ALREADY_OPEN
 
-        self.queues[owner] = queue.Queue()
+        self.queues[owner] = []
 
         return Status.SUCCESS
 
@@ -197,50 +205,62 @@ class Queue:
         
         if owner not in self.queues:
             return False
-        self.queues[owner].put((guest, owner))
+        self.queues[owner] += [(guest, owner)]
 
         return True
 
     def forfeit(self, guest):
         if guest not in self.requesters:
             return False
-
         owner = self.requesters[guest]
-        del self.requesters[guest]
 
-        if owner not in self.stale:
-            self.stale[owner] = []
-        self.stale[owner] += [guest]
+        while (guest, owner) in self.queues[owner]:
+            self.queues[owner].remove( (guest, owner) )
+
+        while guest in self.requesters:
+            del self.requesters[guest]
 
         return True
 
     def next(self, owner):
-        q = self.queues[owner].get(block=False)
-        while q is not None and owner in self.stale and q[0] in self.stale[owner]:
-            self.stale[owner].remove(q[0])
-            q = self.queues[owner].get(block=False)
-            
-        if q is None:
-            return None
+        t = self.market.get(owner)
+        name = "???"
+        if t is not None and t != []:
+            name = t.name
+        if owner not in self.queues:
+            logger.info(f"owner {name} was not among queues. they must be already closed")
+            return None, Status.ALREADY_CLOSED
+        elif len(self.queues[owner]) == 0:
+            # print(f"{name}'s queue has nobody in it")
+            return None, Status.QUEUE_EMPTY
         
-        del self.requesters[q[0]]
-        return (q[0], self.market.get(q[1]))
+        logger.info(f"{name}'s queue has content")
+        q = self.queues[owner].pop(0)
+
+        if q is None:
+            logger.info(f"{name}'s queue had [None] in it, so start the closing procedure")
+            return None, Status.ALREADY_CLOSED
+        guest, _ = q
+
+        if guest in self.requesters:
+            del self.requesters[guest]
+
+        logger.info(f"returning {name}'s next guest'")
+        return (guest, self.market.get(owner)), Status.SUCCESS
 
     def close(self, owner):
         if owner not in self.queues:
             return None, Status.ALREADY_CLOSED
         q = self.queues[owner]
+        remaining = [qq[0] for qq in q]
 
-        leftovers = []
-        while not q.empty():
-            r = q.get()[0]
-            if owner not in self.stale or r not in self.stale[owner]:
-                leftovers += [r]
-            if r in self.requesters:
-                del self.requesters[r]
+        while len(q) > 0:
+            g, _ = q.pop(0)
+            while g in self.requesters:
+                del self.requesters[g]
 
-        self.queues[owner].put(None)
+        self.queues[owner] += [None]
         del self.queues[owner]
 
-        return leftovers, Status.SUCCESS
+        return remaining, Status.SUCCESS
     
