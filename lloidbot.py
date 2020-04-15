@@ -171,17 +171,21 @@ class Lloid(discord.Client):
             return Lloid.AlreadyClosed
 
         logger.info(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
-        await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! "
+        msg = await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! "
         "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left "
         "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in."
         f"The Dodo code is **{task[1].dodo}**.")
+        if msg is None:
+            logger.error("Failed to let them in!")
+        else:
+            logger.info(f"Sent out a code, message id is {msg.id}")
         q = self.market.queue.queues[owner]
         logger.info(f"Remainder in queue = {len(q)}")
         if len(q) > 0:
             logger.info(f"looking up {q[0][0]}")
             next_in_line = self.get_user(q[0][0])
             if next_in_line is not None:
-                logger.info("Sending warning")
+                logger.info(f"Sending warning to {next_in_line.name}")
                 await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! "
                 f"Please have your tickets ready, we'll be calling you forward some time in the next 0-{queue_interval_minutes} minutes!")
         logger.info(f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
