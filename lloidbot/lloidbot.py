@@ -12,80 +12,13 @@ import re
 import sentry_sdk
 import logging
 import argparse
+import typing
 
 queue = []
 queue_interval_minutes = 10
-queue_interval = 60*queue_interval_minutes
+queue_interval = 60 * queue_interval_minutes
 poll_sleep_interval = 5
 logger = logging.getLogger('lloid')
-
-class Command:
-    Successful = 0
-    Error = 1
-
-    # Command types
-    Close = 2
-    Done = 3
-    QueueInfo = 4
-    Pause = 5
-    Next = 6
-
-    def __init__(self, command):
-        logger.debug(command.strip().lower())
-        if command.strip().lower() == "close":
-            self.status = Command.Successful
-            self.cmd = Command.Close
-            return
-        elif command.strip().lower() == "done":
-            self.status = Command.Successful
-            self.cmd = Command.Done
-            return
-        elif command.strip().lower() == "!queueinfo":
-            self.status = Command.Successful
-            self.cmd = Command.QueueInfo
-            return
-        elif command.strip().lower() == "pause":
-            self.status = Command.Successful
-            self.cmd = Command.Pause
-            return
-        elif command.strip().lower() == "next":
-            self.status = Command.Successful
-            self.cmd = Command.Next
-            return
-
-        self.price = None
-        self.dodo = None
-        self.tz = None
-        self.status = Command.Successful
-        self.cmd = 0
-        self.description = None
-
-        if command is None:
-            self.status = Command.Error
-            return
-        commands = command.split(maxsplit=3)
-        if len(commands) == 0:
-            self.status = Command.Error
-            return
-        else:
-            if commands[0].isdigit():
-                self.price = int(commands[0])
-            else:
-                self.status = Command.Error
-                return
-            if len(commands) > 1:
-                if not re.match(r'[A-HJ-NP-Y0-9]{5}', commands[1], re.IGNORECASE):
-                    self.status = Command.Error
-                    return
-                self.dodo = commands[1]
-            if len(commands) > 2:
-                try:
-                    self.tz = int(commands[2])
-                except ValueError:
-                    self.status = Command.Error
-                    return
-            if len(commands) > 3:
-                self.description = commands[3]
 
 class GeneralCommands(commands.Cog):
     def __init__(self, bot):
@@ -95,23 +28,25 @@ class GeneralCommands(commands.Cog):
     async def queueinfo(self, ctx):
         guest = ctx.message.author.id
         if guest not in self.bot.market.queue.requesters:
-            await ctx.message.channel.send("You don't seem to be queued up for anything. It could also be that the code got sent to you just now. Please check your DMs.")
+            await ctx.send("You don't seem to be queued up for anything. "
+            "It could also be that the code got sent to you just now. Please check your DMs.")
             return
         owner = self.bot.market.queue.requesters[guest]
         q = self.bot.market.queue.queues[owner]
-        qsize = q.qsize()
+        qsize = len(q)
         index = -1
         try:
-            index = [qq[0] for qq in list(q.queue)].index(guest)
+            index = [qq[0] for qq in q].index(guest)
         except:
             pass
 
         if index < 0:
             await ctx.send("You don't seem to be queued up for anything.")
         else:
-            await ctx.send("Your position in the queue is %d in a queue of %d people. Position 0 means you're next." % (index, qsize))
+            index += 1
+            await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you'll get another DM when you reach this position).")
     
-class SellerCommands(commands.Cog):
+class DMCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
@@ -120,8 +55,126 @@ class SellerCommands(commands.Cog):
         return not ctx.message.guild
 
     @commands.command()
-    async def close(self, ctx, *args):
-        await ctx.send(f'close command with args {args}')
+    async def close(self, ctx):
+        if ctx.author.id not in self.bot.market.queue.queues:
+            await ctx.send("You don't seem to have a market open.")
+            return
+        await ctx.send("Thanks for responsibly closing your doors! I'll give my condolences to the people still in line, if any.")
+        denied, status = self.bot.market.close(ctx.author.id)
+        if status == turnips.Status.SUCCESS:
+            for d in denied:
+                await self.bot.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
+            await self.bot.associated_message[ctx.author.id].delete()
+            del self.bot.associated_user[self.bot.associated_message[ctx.author.id].id]
+            del self.bot.associated_message[ctx.author.id]
+            if ctx.author.id in self.bot.requested_pauses:
+                del self.bot.requested_pauses[ctx.author.id]
+
+    @commands.command()
+    async def done(self, ctx):
+        guest = ctx.author.id
+        owner = self.bot.recently_departed.pop(guest, None)
+
+        if owner in self.bot.is_paused and self.bot.is_paused[owner]:
+            await ctx.send("Thanks for the heads-up! "
+            "The queue is actually paused at the moment, so the host will be the one to let the next person in.")
+            return
+        if owner is not None and owner in self.bot.sleepers:
+            logger.info("Visitor done, cancelling timer")
+            self.bot.sleepers[owner].cancel()
+            logger.info("Timer cancelled, thanking visitor")
+            await ctx.send("Thanks for the heads-up! Letting the next person in now.")
+        elif owner is not None:
+            owner_name = self.bot.get_user(owner).name
+            logger.info(f"Visitor marked themselves as done, but owner {owner_name} was not in sleepers")
+            await ctx.send("Thanks for the heads-up! Letting the next person in now.")
+
+    @commands.command()
+    async def next(self, ctx):
+        if self.bot.market.has_listing(ctx.message.author.id):
+            await ctx.send("Okay, letting the next person in.")
+            self.bot.requested_pauses[ctx.message.author.id] = 0
+            if ctx.message.author.id in self.bot.sleepers:
+                self.bot.sleepers[ctx.message.author.id].cancel()
+            else:
+                owner_name = self.bot.get_user(ctx.message.author.id).name
+                logger.debug(f"{owner_name} tried sending in the next one, but there were no timers to cancel.")
+            return
+        else:
+            await ctx.send("Nice try.")
+    
+    @commands.command()
+    async def pause(self, ctx):
+        if ctx.author.id in self.bot.market.queue.queues:
+            if self.bot.market.has_listing(ctx.author.id):
+                await ctx.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
+                "You can cancel this by letting the next person in with **next**.")
+                self.bot.is_paused[ctx.author.id] = True
+                if ctx.author.id not in self.bot.requested_pauses:
+                    self.bot.requested_pauses[ctx.author.id] = 0
+                self.bot.requested_pauses[ctx.author.id] += 1
+                return
+            else:
+                await ctx.send("If you want to move to the back of the line, unqueue and requeue. "
+                "If you think the island is congested, please tell the host to pause with the same command you just sent.")
+    
+    @commands.command()
+    async def host(self, ctx, price: int, dodo, tz: typing.Optional[int], *, description = None):
+        # This check can probably be converted into a discord.py command check, but it's only used for one command at the moment.
+        if not re.match(r'[A-HJ-NP-Y0-9]{5}', dodo, re.IGNORECASE):
+            await ctx.send(f"This dodo code appears to be invalid. Please make sure to check the length and characters used.")
+            return
+        
+        res = self.bot.market.declare(ctx.author.id, ctx.author.name, price, dodo, tz)
+        if res == turnips.Status.ALREADY_OPEN:
+            await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
+        elif res == turnips.Status.SUCCESS:
+            if ctx.author.id in self.bot.sleepers:
+                logger.info("Owner has previous outstanding timers. Cancelling them now.")
+                self.bot.sleepers[ctx.author.id].cancel()
+            self.bot.requested_pauses[ctx.author.id] = 0
+            await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
+            "You can update the dodo code with the normal syntax. "
+            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
+            "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
+            
+            turnip = self.bot.market.get(ctx.author.id)
+            desc = ""
+            if description is not None:
+                self.bot.descriptions[ctx.author.id] = description
+                desc = f"\n**{turnip.name}** adds: {description}"
+            
+            msg = await self.bot.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
+            f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
+            f"React to this message with 🦝 to be queued up for a code. {desc}")
+            await msg.add_reaction('🦝')
+            self.bot.associated_user[msg.id] = ctx.author.id
+            self.bot.associated_message[ctx.author.id] = msg
+
+            self.bot.loop.create_task(self.bot.queue_manager(ctx.author.id))
+        elif res == turnips.Status.TIMEZONE_REQUIRED:
+            await ctx.send(("This seems to be your first time setting turnips, "
+            "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
+            "The dodo code can be a placeholder if you want."))
+        elif res == turnips.Status.PRICE_REQUIRED:
+            await ctx.send("You'll need to tell us how much the turnips are at least.")
+        elif res == turnips.Status.DODO_REQUIRED:
+            await ctx.send(("This seems to be your first time setting turnips, "
+            "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
+            "The dodo code can be a placeholder if you want."))
+        elif res == turnips.Status.ITS_SUNDAY:
+            await ctx.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
+        elif res == turnips.Status.CLOSED:
+            logger.info("This message should no longer be reachable (status = closed)")
+    
+    @host.error
+    async def host_error(self, ctx, error):
+        logger.info(f"Invalid command received: {ctx.message.content}")
+        logger.info(error)
+        await ctx.send("Usage: \"host [price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
+                "The quotes (\") and square brackets ([]) are not part of the input!\n\n"
+                "Example usage: *host 123 C0FEE 8 Brewster is in town selling infinite durability axes*\n\n "
+                "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you are opening for reasons other than turnips.")
 
 class Lloid(commands.Bot):
     Successful = 0
@@ -150,6 +203,8 @@ class Lloid(commands.Bot):
             or isinstance(error, commands.CommandNotFound)
             or isinstance(error, commands.DisabledCommand)
         ):
+            logger.debug("Invalid command, error:")
+            logger.debug(error)
             return
 
     async def on_ready(self):
@@ -185,6 +240,15 @@ class Lloid(commands.Bot):
             logger.debug(f"{user.name} reacted with raccoon")
             await self.queue_user(payload.message_id, user)
 
+    async def on_raw_reaction_remove(self, payload):
+        if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
+            user = await self.fetch_user(payload.user_id)
+            logger.debug(f"{user.name} unreacted with raccoon")
+            owner_name = self.get_user(self.associated_user[payload.message_id]).name
+            waiting_for = self.market.queue.requesters[payload.user_id]
+            if waiting_for == self.associated_user[payload.message_id] and self.market.forfeit(payload.user_id):
+                await user.send("Removed you from the queue for %s." % owner_name)
+
     async def queue_user(self, message_id, user):
         if message_id in self.associated_user:
             status, size = self.market.request(user.id, self.associated_user[message_id])
@@ -209,15 +273,6 @@ class Lloid(commands.Bot):
         else:
             k = self.associated_user.keys
             logger.info(f"{message_id} was not found in {k}")
-
-    async def on_raw_reaction_remove(self, payload):
-        if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
-            user = await self.fetch_user(payload.user_id)
-            logger.debug(f"{user.name} unreacted with raccoon")
-            owner_name = self.get_user(self.associated_user[payload.message_id]).name
-            waiting_for = self.market.queue.requesters[payload.user_id]
-            if waiting_for == self.associated_user[payload.message_id] and self.market.forfeit(payload.user_id):
-                await user.send("Removed you from the queue for %s." % owner_name)
 
     async def on_disconnect(self):
         logger.warning("Lloid got disconnected.")
@@ -309,118 +364,10 @@ class Lloid(commands.Bot):
         if message.author == self.user:
             return
 
+        # This entire handler can be removed, but if it's defined, the line below *must* be executed
+        # otherwise commands are not processed at all.
         await self.process_commands(message)
-
-        if isinstance(message.channel, discord.DMChannel):
-            if message.content.strip() != "!queueinfo":
-                logger.info(f">>>> (PM) {message.author.name}: {message.content}")
-            command = Command(message.content)
-
-            if command.status == Command.Successful:
-                if command.cmd == Command.Pause and message.author.id in self.market.queue.queues:
-                    if self.market.has_listing(message.author.id):
-                        await message.channel.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
-                        "You can cancel this by letting the next person in with **next**.")
-                        self.is_paused[message.author.id] = True
-                        if message.author.id not in self.requested_pauses:
-                            self.requested_pauses[message.author.id] = 0
-                        self.requested_pauses[message.author.id] += 1
-                        return
-                    else:
-                        await message.channel.send("If you want to move to the back of the line, unqueue and requeue. "
-                        "If you think the island is congested, please tell the host to pause with the same command you just sent.")
-                elif command.cmd == Command.Next:
-                    if self.market.has_listing(message.author.id):
-                        await message.channel.send("Okay, letting the next person in.")
-                        self.requested_pauses[message.author.id] = 0
-                        if message.author.id in self.sleepers:
-                            self.sleepers[message.author.id].cancel()
-                        else:
-                            owner_name = self.get_user(message.author.id).name
-                            logger.debug("{owner_name} tried sending in the next one, but there were no timers to cancel.")
-                        return
-                    else:
-                        await message.channel.send("Nice try.")
-                elif command.cmd == Command.Close:
-                    if message.author.id not in self.market.queue.queues:
-                        await message.channel.send("You don't seem to have a market open.")
-                        return
-                    await message.channel.send("Thanks for responsibly closing your doors! I'll give my condolences to the people still in line, if any.")
-                    denied, status = self.market.close(message.author.id)
-                    if status == turnips.Status.SUCCESS:
-                        for d in denied:
-                            await self.get_user(d).send("Apologies, but it looks like the person you were waiting for closed up.")
-                        # await self.associated_message[message.author.id].edit(content=">>> Sorry! This island has been delisted!")
-                        # await self.associated_message[message.author.id].unpin()
-                        await self.associated_message[message.author.id].delete()
-                        del self.associated_user[self.associated_message[message.author.id].id]
-                        del self.associated_message[message.author.id]
-                        if message.author.id in self.requested_pauses:
-                            del self.requested_pauses[message.author.id]
-                elif command.cmd == Command.Done:
-                    guest = message.author.id
-                    owner = self.recently_departed.pop(guest, None)
-                    if owner in self.is_paused and self.is_paused[owner]:
-                        await message.channel.send("Thanks for the heads-up! "
-                        "The queue is actually paused at the moment, so the host will be the one to let the next person in.")
-                        return
-                    if owner is not None and owner in self.sleepers:
-                        logger.info("Visitor done, cancelling timer")
-                        self.sleepers[owner].cancel()
-                        logger.info("Timer cancelled, thanking visitor")
-                        await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
-                    elif owner is not None:
-                        owner_name = self.get_user(owner).name
-                        logger.info(f"Visitor marked themselves as done, but owner {owner_name} was not in sleepers")
-                        await message.channel.send("Thanks for the heads-up! Letting the next person in now.")
-                else:
-                    res = self.market.declare(message.author.id, message.author.name, command.price, command.dodo, command.tz)
-                    if res == turnips.Status.ALREADY_OPEN:
-                        await message.channel.send("Updated your info. Anyone still in line will get the updated codes.")
-                    elif res == turnips.Status.SUCCESS:
-                        if message.author.id in self.sleepers:
-                            logger.info("Owner has previous outstanding timers. Cancelling them now.")
-                            self.sleepers[message.author.id].cancel()
-                        self.requested_pauses[message.author.id] = 0
-                        await message.channel.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
-                        "You can update the dodo code with the normal syntax. "
-                        f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
-                        "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
-                        
-                        turnip = self.market.get(message.author.id)
-                        desc = ""
-                        if command.description is not None:
-                            self.descriptions[message.author.id] = command.description
-                            desc = f"\n**{turnip.name}** adds: {command.description}"
-                        
-                        msg = await self.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
-                        f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
-                        f"React to this message with 🦝 to be queued up for a code. {desc}")
-                        await msg.add_reaction('🦝')
-                        self.associated_user[msg.id] = message.author.id
-                        self.associated_message[message.author.id] = msg
-
-                        self.loop.create_task(self.queue_manager(message.author.id))
-                    elif res == turnips.Status.TIMEZONE_REQUIRED:
-                        await message.channel.send(("This seems to be your first time setting turnips, "
-                        "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
-                        "The dodo code can be a placeholder if you want."))
-                    elif res == turnips.Status.PRICE_REQUIRED:
-                        await message.channel.send("You'll need to tell us how much the turnips are at least.")
-                    elif res == turnips.Status.DODO_REQUIRED:
-                        await message.channel.send(("This seems to be your first time setting turnips, "
-                        "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
-                        "The dodo code can be a placeholder if you want."))
-                    elif res == turnips.Status.ITS_SUNDAY:
-                        await message.channel.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
-                    elif res == turnips.Status.CLOSED:
-                        logger.info("This message should no longer be reachable (status = closed)")
-            else:
-                await message.channel.send("Usage: \"[price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
-                "The quotes (\")and square brackets ([]) are not part of the input!\n\n"
-                "Example usage: *123 C0FEE 8 Brewster is in town selling infinite durability axes*\n\n "
-                "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you were opening for reasons other than turnips.")
-
+        
 def main(): 
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', '-v', action='count', help='Sets the verbosity level of the logger.', default=0, required=False)
