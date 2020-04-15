@@ -26,19 +26,19 @@ The bot can pin and unpin listings, but I haven't actually tested this out becau
 
 Usage:
 1. If your Nooklings are buying turnips at a high price:
-  a. PM Lloid the following: [price] [optional dodo] [optional gmt offset]
+  a. PM Lloid the following: `host [price] [optional dodo] [optional gmt offset]`
   b. The dodo code and gmt offset are not optional if it's your first time to set turnip prices.
   c. Lloid will then post in #turnips
   d. PM the bot the word 'close' without the quotes to delist your prices and send an apology to everyone still waiting in line.
   Examples:
     New user, Nooklings buying turnips at 150 bells, Dodo code is DODOX, and timezone is GMT+8:
-      150 DODOX 8 
+      `host 150 DODOX 8`
     Already declared a price/dodo code/timezone before, but you had network problems so you had to get a new Dodo code.
-      150 DODOY
+      `host 150 DODOY`
     Moved to another country, so you have a new timezone.
-      150 DODOZ -5
+      `host 150 DODOZ -5`
     Same play session, but prices changed to 20 bells so you have to update the listing:
-      20 
+      `host 20` 
 
 2. If you saw a high price being posted in #turnips:
   a. React with the raccoon emoji. Lloid will make the initial reaction to help out.
