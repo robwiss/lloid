@@ -3,7 +3,12 @@
 / unreacting from any message dequeues you
 / double-queuing seems to still work
 
-Fix bug where trying to update your dodo code instead creates a new listing
+/Fix bug where trying to update your dodo code instead creates a new listing
+/Update message if price was updated (eg: due to typo)
+Make bot work on Sundays
+/ "done" should not work if the host explicitly paused
+"done" doesn't always work. not sure if this was introduced by the new change above or if the bug was always there. unsure how to reproduce
+when someone unreacts, making a new person #0, we should send a warning message.
 
 *** FEATURES THAT CAN BE ADDED LATER ***
 / make !queueinfo work in pms
@@ -12,7 +17,7 @@ Fix bug where trying to update your dodo code instead creates a new listing
 / Let host let next person in
 have lloid announce if they're going down for maintenance
 remove stale entries from recently_departed list when market closes.
-5 minute warning
+/ 5 minute warning
 
 allow bot to be on multiple discord servers
 refactor

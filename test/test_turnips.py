@@ -5,9 +5,8 @@ from datetime import datetime
 from unittest import mock 
 import freezegun
 
-
-alice = Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*12)
-bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*12)
+alice = Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*14)
+bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*14)
 # March 24, 2020 - Tuesday
 tuesday_morning = datetime(2020, 3, 24, 10, 20)
 tuesday_evening = datetime(2020, 3, 24, 21, 20)
@@ -48,10 +47,10 @@ class TestTurnips(unittest.TestCase):
         self.insert_sample_rows()
 
         t = self.market.get(alice.id)
-        assert t.equals(alice)
+        assert t.equals(alice), f"{t} | {alice}"
 
         t = self.market.get(bella.id)
-        assert t.equals(bella)
+        assert t.equals(bella), f"{t} | {bella}"
 
     @freezegun.freeze_time(tuesday_morning)
     def test_insert_new(self):
@@ -87,7 +86,7 @@ class TestTurnips(unittest.TestCase):
     @freezegun.freeze_time(tuesday_evening)
     def test_insert_evening_with_offset(self):
         result = self.market.declare(bella.id, bella.name, 150, bella.dodo, bella.gmtoffset)
-        assert result == Status.CLOSED, result
+        assert result == Status.SUCCESS, result
 
     @freezegun.freeze_time(wednesday_early)
     def test_insert_early_morning_with_offset(self):
@@ -118,7 +117,7 @@ class TestTurnips(unittest.TestCase):
     def test_insert_on_sunday(self):
         self.insert_sample_rows()
         result = self.market.declare(alice.id, alice.name, 150)
-        assert result == Status.ITS_SUNDAY
+        assert result == Status.SUCCESS
 
     @freezegun.freeze_time(saturday_evening)
     def test_insert_on_saturday_evening(self):
@@ -130,7 +129,7 @@ class TestTurnips(unittest.TestCase):
     def test_insert_on_saturday_1159(self):
         self.insert_sample_rows()
         result = self.market.declare(alice.id, alice.name, 150)
-        assert result == Status.CLOSED
+        assert result == Status.SUCCESS
 
 if __name__ == '__main__':
     unittest.main() 

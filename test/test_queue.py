@@ -57,12 +57,12 @@ class TestQueue(unittest.TestCase):
         assert len(self.market.queue.requesters) == 0 
         self.market.request(100, alice.id)
         assert len(self.market.queue.requesters) == 1
-        assert self.market.queue.queues[alice.id].qsize() == 1
-        n = self.market.next(alice.id)
+        assert len(self.market.queue.queues[alice.id]) == 1
+        n, _ = self.market.next(alice.id)
         assert n[0] == 100
         assert n[1].id == alice.id
         assert len(self.market.queue.requesters) == 0
-        assert self.market.queue.queues[alice.id].qsize() == 0
+        assert len(self.market.queue.queues[alice.id]) == 0
 
     @freezegun.freeze_time(tuesday_morning)
     def test_request_next_returns_queue_size(self):
@@ -86,12 +86,13 @@ class TestQueue(unittest.TestCase):
         self.market.request(101, bella.id)
         self.market.request(102, bella.id)
 
-        n = self.market.next(bella.id)
-        assert n[0] == 100
+        n, st = self.market.next(bella.id)
+        assert st == Status.SUCCESS
+        assert n[0] == 100, n[0]
 
         remaining, status = self.market.close(bella.id)
         assert status == Status.SUCCESS
-        assert len(remaining) == 2
+        assert len(remaining) == 2, remaining
         assert 101 in remaining
         assert 102 in remaining
 
@@ -118,15 +119,15 @@ class TestQueue(unittest.TestCase):
         self.market.request(102, bella.id)
         self.market.request(103, bella.id)
 
-        n = self.market.next(bella.id)
+        n, _ = self.market.next(bella.id)
         assert n[0] == 100
 
-        self.market.forfeit(102)
+        assert self.market.forfeit(102)
 
-        n = self.market.next(bella.id)
+        n, _ = self.market.next(bella.id)
         assert n[0] == 101
-        n = self.market.next(bella.id)
-        assert n[0] == 103
+        n, _ = self.market.next(bella.id)
+        assert n[0] == 103, n[0]
 
     @freezegun.freeze_time(tuesday_morning)
     def test_cant_close_twice(self):
@@ -164,8 +165,8 @@ class TestQueue(unittest.TestCase):
         self.market.request(100, bella.id)
         assert len(self.market.queue.requesters) == 1 
         assert len(self.market.queue.queues) == 2
-        assert self.market.queue.queues[alice.id].qsize() == 1
-        assert self.market.queue.queues[bella.id].qsize() == 0
+        assert len(self.market.queue.queues[alice.id]) == 1
+        assert len(self.market.queue.queues[bella.id]) == 0
 
 if __name__ == '__main__':
     unittest.main() 
