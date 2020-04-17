@@ -19,15 +19,15 @@ class QueueManager:
     def __init__(self, market):
         self.market = market
 
-    def declare(self, idx, name, price, dodo=None, tz=None, chan=None):
+    def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
         preexisted = self.market.get(idx) is not None 
-        status = self.market.declare(idx, name, price, dodo, tz, chan)
-        if status == Status.SUCCESS:
+        status = self.market.declare(idx, name, price, dodo, tz, description, chan)
+        if status in (Status.SUCCESS, Status.ALREADY_OPEN):
             act = Action.LISTING_ACCEPTED
             if preexisted:
                 act = Action.LISTING_UPDATED
             return [(act, self.market.get(idx))]
-        elif status in (Status.TIMEZONE_REQUIRED, Status.DODO_REQUIRED, Status.ALREADY_OPEN):
+        elif status in (Status.TIMEZONE_REQUIRED, Status.DODO_REQUIRED):
             return [(Action.NOTHING, status)]
         else:
             logger.warning(f"Declaration from user {name} resulted in a status of {status}, which should never even happen")
@@ -60,6 +60,9 @@ class Map1to1:
     def __init__(self):
         self.l2r = {}
         self.r2l = {}
+
+    def __contains__(self, x):
+        return x in self.l2r 
 
     def get_left(self, r):
         return self.r2l[r]
@@ -102,20 +105,3 @@ class Action(enum.Enum): # A list of actions that were taken by the queue manage
     LISTING_CLOSED = 7 # owner, [queued guests]
     DISPENSING_BLOCKED = 8 # owner, [queued guests]
     DISPENSING_REACTIVATED = 9 # owner, [queued guests]
-
-class Island:
-    CLOSED = 1
-    OPEN = 2
-    PAUSED = 3
-    FULL = 4
-
-    island_to_owner = Map1to1()
-
-    @staticmethod
-    def of(owner):
-        return Island.island_to_owner.get_left(owner)
-
-    def __init__(self, owner, market):
-        self.queue = None
-        self.owner = owner
-        self.market = market

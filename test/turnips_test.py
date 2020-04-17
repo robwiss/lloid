@@ -5,8 +5,8 @@ from datetime import datetime
 from unittest import mock 
 import freezegun
 
-alice = Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*14)
-bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*14)
+alice = Turnip('global', 1, 'Alice', 'ALICE', 0, 'I am Alice', None, [None]*14)
+bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, 'I am Bella', None, [None]*14)
 # March 24, 2020 - Tuesday
 tuesday_morning = datetime(2020, 3, 24, 10, 20)
 tuesday_evening = datetime(2020, 3, 24, 21, 20)
@@ -26,10 +26,10 @@ class TestTurnips(unittest.TestCase):
         assert len(t) == 0
 
     def insert_sample_rows(self):
-        self.db.execute("replace into turnips(chan, id, nick, dodo, utcoffset) values"
-                        "( 'global', 1, 'Alice', 'ALICE', 0 )")
-        self.db.execute("replace into turnips(chan, id, nick, dodo, utcoffset) values"
-                        "( 'nookmart', 2, 'Bella', 'BELLA', 5 )")
+        self.db.execute("replace into turnips(chan, id, nick, dodo, utcoffset, description) values"
+                        "( 'global', 1, 'Alice', 'ALICE', 0, 'I am Alice' )")
+        self.db.execute("replace into turnips(chan, id, nick, dodo, utcoffset, description) values"
+                        "( 'nookmart', 2, 'Bella', 'BELLA', 5, 'I am Bella' )")
     
     def tearDown(self):
         self.db.execute("delete from turnips")
@@ -63,7 +63,8 @@ class TestTurnips(unittest.TestCase):
 
     @freezegun.freeze_time(tuesday_morning)
     def test_insert_existing(self):
-        self.insert_sample_rows()
+        self.market.declare(alice.id, alice.name, None, alice.dodo, alice.gmtoffset)
+
         t = self.market.get(alice.id)
         assert t.history[2] is None
         self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
@@ -71,6 +72,42 @@ class TestTurnips(unittest.TestCase):
         t = self.market.get(alice.id)
         assert t.history[2] == 150
         assert t.current_price() == 150
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_insert_with_new_description(self):
+        self.market.declare(alice.id, alice.name, None, alice.dodo, alice.gmtoffset, "old description")
+
+        t = self.market.get(alice.id)
+        assert t.description == "old description"
+
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset, "new description")
+
+        t = self.market.get(alice.id)
+        assert t.description == "new description"
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_insert_with_no_description_does_not_nuke_old_description(self):
+        self.market.declare(alice.id, alice.name, None, alice.dodo, alice.gmtoffset, "old description")
+
+        t = self.market.get(alice.id)
+        assert t.description == "old description"
+
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset, None)
+
+        t = self.market.get(alice.id)
+        assert t.description == "old description"
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_insert_with_blank_description_does_not_nuke_old_description(self):
+        self.market.declare(alice.id, alice.name, None, alice.dodo, alice.gmtoffset, "old description")
+
+        t = self.market.get(alice.id)
+        assert t.description == "old description"
+
+        self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset, "  ")
+
+        t = self.market.get(alice.id)
+        assert t.description == "old description"
 
     # Test inserting something where the bot's local time is morning, but the user has an offset.
     @freezegun.freeze_time(tuesday_morning)

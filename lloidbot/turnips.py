@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import queue
 import logging
+import enum
 
 logger = logging.getLogger('lloid')
 
@@ -37,22 +38,23 @@ def compute_current_interval(offset):
     return str(day_of_week) + interval, local.weekday()*2
 
 class Turnip:
-    def __init__(self, chan, idx, name, dodo, gmtoffset, latest_time, history):
+    def __init__(self, chan, idx, name, dodo, gmtoffset, description, latest_time, history):
         self.chan = chan
         self.id = idx
         self.name = name
         self.dodo = dodo
         self.gmtoffset = gmtoffset
+        self.description = description
         self.latest_time = latest_time
         self.history = history
 
     def clone(self):
-        return Turnip(self.chan, self.id, self.name, self.dodo, self.gmtoffset, self.latest_time, self.history)
+        return Turnip(self.chan, self.id, self.name, self.dodo, self.gmtoffset, self.description, self.latest_time, self.history)
 
     def equals(self, t):
         return self.chan == t.chan and self.id == t.id and self.name == t.name and \
                self.dodo == t.dodo and self.gmtoffset == t.gmtoffset and \
-               self.history == t.history
+               self.description == t.description and self.history == t.history
     
     def current_time(self):
         return current_datetime(self.gmtoffset)
@@ -62,11 +64,11 @@ class Turnip:
         return self.history[intervals[interval]]
 
     def __str__(self):
-        return "%s - %s - %s - %s - %s" % (self.chan, self.name, self.dodo, self.gmtoffset, self.history)
+        return "%s - %s - %s - %s - %s - %s" % (self.chan, self.name, self.dodo, self.gmtoffset, self.description, self.history)
     
     @staticmethod
     def from_row(row):
-        return Turnip(row[0], row[1], row[2], row[3], row[4], row[5], list(row[6:]))
+        return Turnip(row[0], row[1], row[2], row[3], row[4], row[5], row[6], list(row[7:]))
 
 class StalkMarket:
     def __init__(self, db: sqlite3.Connection):
@@ -75,7 +77,7 @@ class StalkMarket:
         self.queue = Queue(self)
 
     def db_init(self):
-        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b,
+        self.db.execute("""create table if not exists turnips(chan, id, nick, dodo, utcoffset, description, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b,
                 primary key(chan, id))""")
 
         self.wipe_old_prices()
@@ -88,9 +90,9 @@ class StalkMarket:
     def get(self, idx, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=? and id=?", (chan,idx)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, description, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=? and id=?", (chan,idx)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where id=?", (idx,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, description, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where id=?", (idx,)).fetchall()
 
         if results is None:
             return []
@@ -114,7 +116,7 @@ class StalkMarket:
     def close(self, owner):
         return self.queue.close(owner)
 
-    def declare(self, idx, name, price, dodo=None, tz=None, chan=None):
+    def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
         turnip = self.get(idx, chan)
         if tz is None: 
             if turnip is None or turnip.gmtoffset is None:
@@ -133,11 +135,13 @@ class StalkMarket:
             dodo = turnip.dodo
 
         if turnip is None:
-            self.db.execute("replace into turnips(chan, id, nick, dodo," + field + ", utcoffset, latest_time) values"
-                    " (?,?,?,?,?,?,?)", (chan, idx, name, dodo, price, tz, current_datetime(tz)))
+            self.db.execute("replace into turnips(chan, id, nick, dodo," + field + ", utcoffset, description, latest_time) values"
+                    " (?,?,?,?,?,?,?,?)", (chan, idx, name, dodo, price, tz, description, current_datetime(tz)))
         else:
-            self.db.execute("update turnips set " + field + "=?, dodo=?, utcoffset=?, latest_time=? where id=? ", 
-                (price, dodo, tz, current_datetime(tz), idx))
+            if description is None or description.strip() == "":
+                description = turnip.description
+            self.db.execute("update turnips set " + field + "=?, dodo=?, utcoffset=?, description=?, latest_time=? where id=? ", 
+                (price, dodo, tz, description, current_datetime(tz), idx))
 
         self.db.commit()
 
@@ -153,9 +157,9 @@ class StalkMarket:
     def get_all(self, chan=None):
         results = None
         if chan is not None:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=?", (chan,)).fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, description, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips where chan=?", (chan,)).fetchall()
         else:
-            results = self.db.execute("select chan, id, nick, dodo, utcoffset, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips ").fetchall()
+            results = self.db.execute("select chan, id, nick, dodo, utcoffset, description, latest_time, val1a, val1b, val2a, val2b, val3a, val3b, val4a, val4b, val5a, val5b, val6a, val6b, val7a, val7b from turnips ").fetchall()
 
         if results is None:
             return []
@@ -173,7 +177,7 @@ class StalkMarket:
                 self.db.execute("update turnips set val1a=NULL, val1b=NULL, val2a=NULL, val2b=NULL, val3a=NULL, val3b=NULL, val4a=NULL, val4b=NULL, val5a=NULL, val5b=NULL, val6a=NULL, val6b=NULL, val7a=NULL, val7b=NULL, dodo=NULL where id=?", (t.id,) )
         self.db.commit()
 
-class Status:
+class Status(enum.Enum):
     SUCCESS = 0
     TIMEZONE_REQUIRED = 1
     PRICE_REQUIRED = 2

@@ -5,8 +5,9 @@ from datetime import datetime
 from unittest import mock 
 import freezegun
 
-alice = Turnip('global', 1, 'Alice', 'ALICE', 0, None, [None]*12)
-bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, [None]*12)
+alice = Turnip('global', 1, 'Alice', 'ALICE', 0, None, None, [None]*12)
+bella = Turnip('nookmart', 2, 'Bella', 'BELLA', 5, None, None, [None]*12)
+
 # March 24, 2020 - Tuesday
 tuesday_morning = datetime(2020, 3, 24, 10, 20)
 tuesday_evening = datetime(2020, 3, 24, 21, 20)

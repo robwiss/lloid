@@ -1,5 +1,5 @@
 from lloidbot.turnips import Status
-from lloidbot.queue_manager import QueueManager
+from lloidbot import queue_manager
 import logging
 import enum
 
@@ -23,9 +23,24 @@ class SocialManager:
     def __init__(self, queueManager):
         self.queueManager = queueManager
 
-    def post_listing(self, user_id, name, price, dodo=None, tz=None, chan=None):
-        
-        pass
+    def post_listing(self, user_id, name, description, price, dodo=None, tz=None, chan=None):
+        out = []
+        res = self.queueManager.declare(user_id, name, price, dodo, tz, description)
+        for r in res:
+            status, *params = r
+            if status == queue_manager.Action.LISTING_ACCEPTED:
+                turnip = params[0]
+                out += [(Action.CONFIRM_LISTING_POSTED, user_id)]
+                out += [(Action.POST_LISTING, user_id, price, description, turnip.current_time())]
+            elif status == queue_manager.Action.LISTING_UPDATED:
+                turnip = params[0]
+                out += [(Action.CONFIRM_LISTING_UPDATED, user_id)]
+                out += [(Action.UPDATE_LISTING, turnip.id, turnip.current_price(), turnip.description, turnip.current_time())]
+            else:
+                logger.warning(f"""Posting the following listing resulted in a status of {status.name}. """
+                                f"""Arguments given to the listing were: {user_id} | {name} | {description} | {price} | {dodo} | {tz} | {chan} """) 
+
+        return out
 
     def register_message(self, user_id, message_id):
         pass
@@ -38,10 +53,10 @@ class SocialManager:
 # should be achievable using features available on standard chat platforms, but 
 # should not be specific to any chat platform.
 # For instance, reactions are not available on IRC, so there should not be any
-# UNREACT_GUEST action. Instead, we have UPDATE_QUEUE_INFO, which on Discord
-# may consist of unreacting to the message, but on IRC might correspond to a 
-# message posted by the bot somewhere--or even to a no-op, if it's deemed too
-# annoying to get such updates on IRC.
+# UNREACT_GUEST action. Instead, we have UPDATE_QUEUE_INFO, which a Discord-specific
+# caller may decide means removing the guest's reaction to the message, but which an 
+# IRC-specific caller might implement as a message posted by the bot somewhere--or 
+# even as a no-op, if it's deemed too annoying to get such updates on IRC.
 class Action(enum.Enum):
     CONFIRM_LISTING_POSTED = 1 # owner_id
     POST_LISTING = 2 # owner id, price, description, turnip.current_time()
