@@ -206,6 +206,7 @@ class Lloid(commands.Bot):
         ):
             logger.debug("Invalid command, error:")
             logger.debug(error)
+            await ctx.send("Usage statement goes here. If you're seeing this, the bot is in testing mode.")
             return
 
     async def on_ready(self):
