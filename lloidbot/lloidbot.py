@@ -206,7 +206,11 @@ class Lloid(commands.Bot):
         ):
             logger.debug("Invalid command, error:")
             logger.debug(error)
-            await ctx.send("Usage statement goes here. If you're seeing this, the bot is in testing mode.")
+            await ctx.send("** If you've used this bot before, note that the syntax has changed slightly.**")
+            await ctx.send("Usage: \"host [price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
+                    "The quotes (\") and square brackets ([]) are **not** part of the input!\n\n"
+                    "Example usage: `host 123 C0FEE 8 Brewster is in town selling infinite durability axes`\n\n "
+                    "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you are opening for reasons other than turnips.")
             return
 
     async def on_ready(self):
