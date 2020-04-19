@@ -183,7 +183,7 @@ class Lloid(commands.Bot):
     QueueEmpty = 2
 
     def __init__(self):
-        super().__init__(command_prefix=self.get_prefix)
+        super().__init__(command_prefix=self.get_prefix, case_insensitive=True)
 
         # Automatically discover cogs
         members = inspect.getmembers(sys.modules[__name__], inspect.isclass)
