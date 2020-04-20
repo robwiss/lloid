@@ -3,7 +3,7 @@ import discord
 from discord.utils import get
 from discord.ext import commands
 import sqlite3
-import lloidbot.turnips as turnips
+from lloidbot import turnips, queue_manager, social_manager
 import asyncio
 import sys
 from dotenv import load_dotenv
@@ -19,6 +19,8 @@ queue_interval_minutes = 10
 queue_interval = 60 * queue_interval_minutes
 poll_sleep_interval = 5
 logger = logging.getLogger('lloid')
+
+
 
 class GeneralCommands(commands.Cog):
     def __init__(self, bot):
@@ -124,11 +126,35 @@ class DMCommands(commands.Cog):
         if not re.match(r'[A-HJ-NP-Y0-9]{5}', dodo, re.IGNORECASE):
             await ctx.send(f"This dodo code appears to be invalid. Please make sure to check the length and characters used.")
             return
-        
+        actions = self.bot.social_manager.post_listing(ctx.author.id, ctx.author.name, description, price, dodo, tz)
+        for a in actions:
+            st, *p = a
+            if st == social_manager.Action.POST_LISTING:
+                pass
+            elif st == social_manager.Action.UPDATE_LISTING:
+                pass
+            elif st == social_manager.Action.CONFIRM_LISTING_POSTED:
+
+                pass
+            elif st == social_manager.Action.CONFIRM_LISTING_UPDATED:
+                await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
+            elif st == social_manager.Action.ACTION_REJECTED:
+                reason = p[0]
+                if reason == queue_manager.Status.DODO_REQUIRED:
+                    await ctx.send(("This seems to be your first time setting turnips, "
+                    "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
+                    "The price can be a placeholder if you want."))
+                elif reason == queue_manager.Status.TIMEZONE_REQUIRED:
+                    await ctx.send(("This seems to be your first time setting turnips, "
+                    "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
+                    "The price can be a placeholder if you want."))
+                else:
+                    logger.warning(f"The following arguments resulted in a status of {reason}: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
+                    ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
+
         res = self.bot.market.declare(ctx.author.id, ctx.author.name, price, dodo, tz)
-        if res == turnips.Status.ALREADY_OPEN:
-            await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
-        elif res == turnips.Status.SUCCESS:
+        
+        if res == turnips.Status.SUCCESS:
             if ctx.author.id in self.bot.sleepers:
                 logger.info("Owner has previous outstanding timers. Cancelling them now.")
                 self.bot.sleepers[ctx.author.id].cancel()
@@ -152,20 +178,13 @@ class DMCommands(commands.Cog):
             self.bot.associated_message[ctx.author.id] = msg
 
             self.bot.loop.create_task(self.bot.queue_manager(ctx.author.id))
-        elif res == turnips.Status.TIMEZONE_REQUIRED:
-            await ctx.send(("This seems to be your first time setting turnips, "
-            "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
-            "The dodo code can be a placeholder if you want."))
         elif res == turnips.Status.PRICE_REQUIRED:
             await ctx.send("You'll need to tell us how much the turnips are at least.")
-        elif res == turnips.Status.DODO_REQUIRED:
-            await ctx.send(("This seems to be your first time setting turnips, "
-            "so you'll need to provide both a dodo code and a GMT offset (just a positive or negative integer). "
-            "The dodo code can be a placeholder if you want."))
         elif res == turnips.Status.ITS_SUNDAY:
+            logger.warning("Lloid shouldn't be blocking people anymore based on it being Sunday, but it just did.")
             await ctx.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
         elif res == turnips.Status.CLOSED:
-            logger.info("This message should no longer be reachable (status = closed)")
+            logger.warning("This message should no longer be reachable (status = closed)")
     
     @host.error
     async def host_error(self, ctx, error):
@@ -229,6 +248,9 @@ class Lloid(commands.Bot):
             self.requested_pauses = {} # owner -> int representing number of requested pauses remaining 
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
+
+            queue_manager = queue_manager.QueueManager(self.market)
+            self.social_manager = social_manager.SocialManager(self.queue_manager)
 
             deleted = await self.report_channel.purge(check=lambda m: m.author==self.user)
             num_del = len(deleted)

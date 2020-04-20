@@ -118,6 +118,10 @@ class StalkMarket:
 
     def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
         turnip = self.get(idx, chan)
+        if dodo is None:
+            if turnip is None or turnip.gmtoffset is None:
+                return Status.DODO_REQUIRED
+            dodo = turnip.dodo
         if tz is None: 
             if turnip is None or turnip.gmtoffset is None:
                 return Status.TIMEZONE_REQUIRED
@@ -128,11 +132,6 @@ class StalkMarket:
         #    return Status.ITS_SUNDAY
 
         field = "val" + interval
-
-        if dodo is None:
-            if turnip is None or turnip.gmtoffset is None:
-                return Status.DODO_REQUIRED
-            dodo = turnip.dodo
 
         if turnip is None:
             self.db.execute("replace into turnips(chan, id, nick, dodo," + field + ", utcoffset, description, latest_time) values"

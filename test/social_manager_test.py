@@ -2,6 +2,7 @@ import unittest
 import sqlite3
 from lloidbot import turnips
 from lloidbot.social_manager import SocialManager, Action
+from lloidbot import queue_manager
 from lloidbot.queue_manager import QueueManager
 from datetime import datetime
 import freezegun
@@ -48,7 +49,7 @@ class TestSocialManager(unittest.TestCase):
 
     @freezegun.freeze_time(tuesday_morning)
     def test_post_listing(self):
-        res = self.manager.post_listing(alice.id, alice.name, standard_description, 150, alice.dodo, alice.gmtoffset)
+        res = self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset)
         assert len(res) == 2
 
         expected = (Action.CONFIRM_LISTING_POSTED, alice.id)
@@ -58,10 +59,39 @@ class TestSocialManager(unittest.TestCase):
         assert expected in res
 
     @freezegun.freeze_time(tuesday_morning)
-    def test_update_listing(self):
-        self.manager.post_listing(alice.id, alice.name, standard_description, 150, alice.dodo, alice.gmtoffset)
+    def test_post_listing_missing_dodo(self):
+        res = self.manager.post_listing(alice.id, alice.name, 150, standard_description)
+        assert len(res) == 1
 
-        res = self.manager.post_listing(alice.id, alice.name, standard_description, 250, alice.dodo, alice.gmtoffset)
+        expected = (Action.ACTION_REJECTED, queue_manager.Status.DODO_REQUIRED)
+        assert expected in res
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_post_listing_missing_tz(self):
+        res = self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo)
+        assert len(res) == 1
+
+        expected = (Action.ACTION_REJECTED, queue_manager.Status.TIMEZONE_REQUIRED)
+        assert expected in res
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_update_listing(self):
+        self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset)
+
+        res = self.manager.post_listing(alice.id, alice.name, 250, standard_description, alice.dodo, alice.gmtoffset)
+        assert len(res) == 2
+
+        expected = (Action.CONFIRM_LISTING_UPDATED, alice.id)
+        assert expected in res
+
+        expected = (Action.UPDATE_LISTING, alice.id, 250, standard_description, tuesday_morning)
+        assert expected in res
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_update_listing_missing_dodo(self):
+        self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset)
+
+        res = self.manager.post_listing(alice.id, alice.name, 250, standard_description)
         assert len(res) == 2
 
         expected = (Action.CONFIRM_LISTING_UPDATED, alice.id)
@@ -72,9 +102,9 @@ class TestSocialManager(unittest.TestCase):
 
     @freezegun.freeze_time(tuesday_morning)
     def test_update_listing_updates_description(self):
-        self.manager.post_listing(alice.id, alice.name, standard_description, 150, alice.dodo, alice.gmtoffset)
+        self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset)
 
-        res = self.manager.post_listing(alice.id, alice.name, updated_description, 150, alice.dodo, alice.gmtoffset)
+        res = self.manager.post_listing(alice.id, alice.name, 150, updated_description, alice.dodo, alice.gmtoffset)
         assert len(res) == 2
 
         expected = (Action.CONFIRM_LISTING_UPDATED, alice.id)
@@ -85,9 +115,9 @@ class TestSocialManager(unittest.TestCase):
 
     @freezegun.freeze_time(tuesday_morning)
     def test_update_listing_without_desc_does_not_nuke_existing_desc(self):
-        res = self.manager.post_listing(alice.id, alice.name, standard_description, 150, alice.dodo, alice.gmtoffset, standard_description)
+        res = self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset, standard_description)
 
-        res = self.manager.post_listing(alice.id, alice.name, None, 250, alice.dodo, alice.gmtoffset)
+        res = self.manager.post_listing(alice.id, alice.name, 250, None, alice.dodo, alice.gmtoffset)
         assert len(res) == 2
 
         expected = (Action.CONFIRM_LISTING_UPDATED, alice.id)

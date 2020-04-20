@@ -23,7 +23,7 @@ class SocialManager:
     def __init__(self, queueManager):
         self.queueManager = queueManager
 
-    def post_listing(self, user_id, name, description, price, dodo=None, tz=None, chan=None):
+    def post_listing(self, user_id, name, price, description=None, dodo=None, tz=None, chan=None):
         out = []
         res = self.queueManager.declare(user_id, name, price, dodo, tz, description)
         for r in res:
@@ -36,6 +36,8 @@ class SocialManager:
                 turnip = params[0]
                 out += [(Action.CONFIRM_LISTING_UPDATED, user_id)]
                 out += [(Action.UPDATE_LISTING, turnip.id, turnip.current_price(), turnip.description, turnip.current_time())]
+            elif status == queue_manager.Action.NOTHING:
+                out += [(Action.ACTION_REJECTED, params[0])]
             else:
                 logger.warning(f"""Posting the following listing resulted in a status of {status.name}. """
                                 f"""Arguments given to the listing were: {user_id} | {name} | {description} | {price} | {dodo} | {tz} | {chan} """) 
@@ -58,6 +60,7 @@ class SocialManager:
 # IRC-specific caller might implement as a message posted by the bot somewhere--or 
 # even as a no-op, if it's deemed too annoying to get such updates on IRC.
 class Action(enum.Enum):
+    ACTION_REJECTED = 0 # reason
     CONFIRM_LISTING_POSTED = 1 # owner_id
     POST_LISTING = 2 # owner id, price, description, turnip.current_time()
     CONFIRM_LISTING_UPDATED = 3 # owner id

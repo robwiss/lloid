@@ -142,7 +142,7 @@ class TestTurnips(unittest.TestCase):
 
     def test_insert_no_dodo(self):
         result = self.market.declare(alice.id, alice.name, 150)
-        assert result == Status.TIMEZONE_REQUIRED
+        assert result == Status.DODO_REQUIRED
 
     @freezegun.freeze_time(tuesday_morning)
     def test_insert_with_implicit_tz_and_dodo(self):
