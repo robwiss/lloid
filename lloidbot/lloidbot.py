@@ -112,7 +112,8 @@ class DMCommands(commands.Cog):
         if ctx.author.id in self.bot.market.queue.queues:
             if self.bot.market.has_listing(ctx.author.id):
                 await ctx.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
-                "You can cancel this by letting the next person in with **next**.")
+                "You can cancel this by letting the next person in with **next**.\n"
+                "Also: **Editing is now supported!** Simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
                 self.bot.is_paused[ctx.author.id] = True
                 if ctx.author.id not in self.bot.requested_pauses:
                     self.bot.requested_pauses[ctx.author.id] = 0
