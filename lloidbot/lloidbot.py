@@ -144,7 +144,7 @@ class DMCommands(commands.Cog):
             
             turnip = self.bot.market.get(ctx.author.id)
             desc = ""
-            if description is not None:
+            if description is not None and description.strip() != "":
                 self.bot.descriptions[ctx.author.id] = description
                 desc = f"\n**{turnip.name}** adds: {description}"
             
@@ -314,6 +314,9 @@ class Lloid(commands.Bot):
                 logger.info(f"Sending warning to {next_in_line.name}")
                 await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! "
                 f"Please have your tickets ready, we'll be calling you forward some time in the next 0-{queue_interval_minutes} minutes!")
+                if owner in self.descriptions and self.descriptions is not None and self.descriptions.strip() != "":
+                    desc = self.descriptions[owner]
+                    await next_in_line.send(f"By the way, here's the current description of the island, in case you need a review or in case it's been updated since you last viewed the listing:\n\n{desc}")
         logger.info(f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
         self.recently_departed[task[0]] = owner
         try:
