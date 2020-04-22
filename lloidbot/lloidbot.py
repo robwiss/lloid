@@ -131,6 +131,8 @@ class DMCommands(commands.Cog):
         
         res = self.bot.market.declare(ctx.author.id, ctx.author.name, price, dodo, tz)
         if res == turnips.Status.ALREADY_OPEN:
+            if description is not None and description.strip() != "":
+                self.bot.descriptions[ctx.author.id] = description
             await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
         elif res == turnips.Status.SUCCESS:
             if ctx.author.id in self.bot.sleepers:
