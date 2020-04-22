@@ -46,7 +46,7 @@ class GeneralCommands(commands.Cog):
             index += 1
             await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you'll get another DM when you reach this position).")
             if owner in self.bot.is_paused and self.bot.is_paused[owner]:
-                wait = self.bot.requested_pauses[owner]*queue_interval_minutes
+                wait = (1+self.bot.requested_pauses[owner])*queue_interval_minutes
                 await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
                     "They can cancel this waiting period at any time, so you won't necessarily be waiting that long.")
     
