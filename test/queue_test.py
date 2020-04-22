@@ -147,6 +147,23 @@ class TestQueue(unittest.TestCase):
         assert remaining is None
 
     @freezegun.freeze_time(tuesday_morning)
+    def test_guest_can_queue_if_previous_queue_closed(self):
+        self.insert_sample_rows()
+        self.market.request(100, bella.id)
+        self.market.request(101, bella.id)
+        self.market.request(102, bella.id)
+        self.market.request(103, alice.id)
+
+        self.market.next(bella.id)
+        remaining, status = self.market.close(bella.id)
+        assert status == Status.SUCCESS
+        assert len(remaining) == 2
+
+        status, remaining = self.market.request(102, alice.id)
+        assert status
+        assert remaining == 2
+
+    @freezegun.freeze_time(tuesday_morning)
     def test_wont_accept_dupe_request(self):
         self.market.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
 
