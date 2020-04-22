@@ -287,11 +287,10 @@ class Lloid(commands.Bot):
                 await user.send(f"Queued you up for a dodo code for {owner_name}. Estimated time: {interval_s}-{interval_e} minutes, give or take "
                 "(it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). "
                 "If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up.\n\n"
-                "In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. "
-                "However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. "
-                "Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. "
+                "In the meantime, please be aware of common courtesy--**if you leave the island, please requeue if you plan to come back for any reason!** "
+                "Also, a lot of people might be ahead of you, so **go in, do the one thing you're there for, and leave**. "
                 "If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** "
-                "There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!")
+                "There are reports that exiting via minus button can result in people getting booted without their loot getting saved, and even save corruption. Use the airport!")
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
         else:
