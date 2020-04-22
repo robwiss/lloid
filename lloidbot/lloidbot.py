@@ -128,12 +128,22 @@ class DMCommands(commands.Cog):
         if not re.match(r'[A-HJ-NP-Y0-9]{5}', dodo, re.IGNORECASE):
             await ctx.send(f"This dodo code appears to be invalid. Please make sure to check the length and characters used.")
             return
-        
+
         res = self.bot.market.declare(ctx.author.id, ctx.author.name, price, dodo, tz)
         if res == turnips.Status.ALREADY_OPEN:
+            desc = ""
             if description is not None and description.strip() != "":
                 self.bot.descriptions[ctx.author.id] = description
+                desc = f"\n**{ctx.author.name}** adds: {description}"
             await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
+ 
+            if ctx.author.id in self.bot.associated_message:
+                msg = self.bot.associated_message[ctx.author.id]
+                turnip = self.bot.market.get(ctx.author.id)
+                await msg.edit(content=
+                    f">>> **{ctx.author.name}** has turnips selling for **{price}**. "
+                    f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
+                    f"React to this message with 🦝 to be queued up for a code. {desc}")
         elif res == turnips.Status.SUCCESS:
             if ctx.author.id in self.bot.sleepers:
                 logger.info("Owner has previous outstanding timers. Cancelling them now.")
@@ -145,11 +155,12 @@ class DMCommands(commands.Cog):
             "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
             
             turnip = self.bot.market.get(ctx.author.id)
+            
             desc = ""
             if description is not None and description.strip() != "":
                 self.bot.descriptions[ctx.author.id] = description
-                desc = f"\n**{turnip.name}** adds: {description}"
-            
+                desc = f"\n**{ctx.author.name}** adds: {description}"
+
             msg = await self.bot.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
             f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
             f"React to this message with 🦝 to be queued up for a code. {desc}")
