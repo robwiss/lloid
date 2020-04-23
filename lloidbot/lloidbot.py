@@ -261,17 +261,14 @@ class Lloid(commands.Bot):
         if user == self.user or message.author != self.user:
             return
 
-        if user.dm_channel is None:
-            await user.create_dm()
-
-        if not user.dm_channel.permissions_for(self.user).send_messages:
-            logger.warning(f"User {user.name} does not allow DMs.")
-            await message.remove_reaction('🦝', user)
-            return 
-
         if payload.emoji.name == '🦝':
             logger.debug(f"{user.name} reacted with raccoon")
-            await self.queue_user(payload.message_id, user)
+            try:
+                await self.queue_user(payload.message_id, user)
+            except:
+                logger.warning(f"User {user.name} tried to queue up, but isn't allowing DMs.")
+                self.market.forfeit(user.id)
+                await message.remove_reaction('🦝', user)
 
     async def on_raw_reaction_remove(self, payload):
         if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
