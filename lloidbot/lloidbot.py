@@ -34,6 +34,8 @@ errors = {
         "This seems to be your first time setting turnips, so you'll need to provide "
         "both a dodo code and a GMT offset (just a positive or negative integer). "
         "The price can be a placeholder if you want.",
+    queue_manager.Status.PRICE_REQUIRED:
+        "You'll need to tell us how much the turnips are at least."
 }
 
 class GeneralCommands(commands.Cog):
@@ -65,7 +67,75 @@ class GeneralCommands(commands.Cog):
                 wait = (1+self.bot.requested_pauses[owner])*queue_interval_minutes
                 await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
                     "They can cancel this waiting period at any time, so you won't necessarily be waiting that long.")
-    
+
+# This should be used after a @commands.command statement
+# This decorator will interpret what to do after a command, based on the social_manager.Action
+# enum.
+def lloid_command(fn):
+    async def decorator(*args, **kwargs):
+        self = args[0]
+        ctx = args[1]
+
+        actions = fn(*args, **kwargs)
+        
+        for a in actions:
+            st, *p = a
+            if st == social_manager.Action.ACTION_REJECTED:
+                if len(p) <= 0:
+                    logger.error(f"The following arguments somehow resulted in a rejection with no reason: |{args}, {kwargs}|")
+                    ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
+                elif p[0] in errors:
+                    await ctx.send(errors[p[0]])
+                else:
+                    logger.error(f"The following arguments resulted in a status of {p[0]}: |{args}, {kwargs}|")
+                    ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
+                continue
+
+            if st == social_manager.Action.POST_LISTING:
+                owner_id, price, description, time = p
+                if ctx.author.id in self.bot.sleepers:
+                    logger.info("Owner has previous outstanding timers. Cancelling them now.")
+                    self.bot.sleepers[ctx.author.id].cancel()
+                self.bot.requested_pauses[ctx.author.id] = 0
+                await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
+                "You can update the dodo code with the normal syntax. "
+                f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
+                "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".\n"
+                "Also: **Editing is now supported!** Simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
+                
+                turnip = self.bot.market.get(ctx.author.id)
+                
+                desc = ""
+                if description is not None and description.strip() != "":
+                    self.bot.descriptions[ctx.author.id] = description
+                    desc = f"\n**{ctx.author.name}** adds: {description}"
+
+                msg = await self.bot.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
+                f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
+                f"React to this message with 🦝 to be queued up for a code. {desc}")
+                await msg.add_reaction('🦝')
+                self.bot.associated_user[msg.id] = ctx.author.id
+                self.bot.associated_message[ctx.author.id] = msg
+
+                self.bot.loop.create_task(self.bot.queue_manager(ctx.author.id))
+            elif st == social_manager.Action.UPDATE_LISTING:
+                owner_id, price, desc, time = p
+                if owner_id in self.bot.associated_message:
+                    msg = self.bot.associated_message[owner_id]
+
+                    await msg.edit(content=
+                        f">>> **{ctx.author.name}** has turnips selling for **{price}**. "
+                        f'Local time: **{time.strftime("%a, %I:%M %p")}**. '
+                        f"React to this message with 🦝 to be queued up for a code. {desc}")
+                else:
+                    logger.error(f"{ctx.author.name} tried to update a listing that doesn't exist anymore.")
+            elif st == social_manager.Action.CONFIRM_LISTING_UPDATED:
+                await ctx.send(messages[st])
+            elif st == social_manager.Action.CONFIRM_LISTING_POSTED:
+                pass
+
+    return decorator
+
 class DMCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -139,78 +209,14 @@ class DMCommands(commands.Cog):
                 "If you think the island is congested, please tell the host to pause with the same command you just sent.")
     
     @commands.command()
+    @lloid_command
     async def host(self, ctx, price: int, dodo, tz: typing.Optional[int], *, description = None):
         # This check can probably be converted into a discord.py command check, but it's only used for one command at the moment.
         if not re.match(r'[A-HJ-NP-Y0-9]{5}', dodo, re.IGNORECASE):
             await ctx.send(f"This dodo code appears to be invalid. Please make sure to check the length and characters used.")
             return
 
-        actions = self.bot.social_manager.post_listing(ctx.author.id, ctx.author.name, description, price, dodo, tz)
-        for a in actions:
-            st, *p = a
-            if st in messages:
-                await ctx.send(messages[st])
-            elif st == social_manager.Action.ACTION_REJECTED:
-                if len(p) <= 0:
-                    logger.error(f"The following arguments somehow resulted in a rejection with no reason: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
-                    ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
-                elif p[0] in errors:
-                    await ctx.send(errors[p[0]])
-                else:
-                    logger.error(f"The following arguments resulted in a status of {p[0]}: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
-                    ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
-
-            if st == social_manager.Action.POST_LISTING:
-                pass
-            elif st == social_manager.Action.UPDATE_LISTING:
-                owner_id, price, desc, time = p
-                if owner_id in self.bot.associated_message:
-                    msg = self.bot.associated_message[owner_id]
-
-                    await msg.edit(content=
-                        f">>> **{ctx.author.name}** has turnips selling for **{price}**. "
-                        f'Local time: **{time.strftime("%a, %I:%M %p")}**. '
-                        f"React to this message with 🦝 to be queued up for a code. {desc}")
-                else:
-                    logger.error(f"{ctx.author.name} tried to update a listing that doesn't exist anymore.")
-            elif st == social_manager.Action.CONFIRM_LISTING_POSTED:
-                pass
-
-        res = self.bot.market.declare(ctx.author.id, ctx.author.name, price, dodo, tz)
-        
-        if res == turnips.Status.SUCCESS:
-            if ctx.author.id in self.bot.sleepers:
-                logger.info("Owner has previous outstanding timers. Cancelling them now.")
-                self.bot.sleepers[ctx.author.id].cancel()
-            self.bot.requested_pauses[ctx.author.id] = 0
-            await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
-            "You can update the dodo code with the normal syntax. "
-            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
-            "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".\n"
-            "Also: **Editing is now supported!** Simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
-            
-            turnip = self.bot.market.get(ctx.author.id)
-            
-            desc = ""
-            if description is not None and description.strip() != "":
-                self.bot.descriptions[ctx.author.id] = description
-                desc = f"\n**{ctx.author.name}** adds: {description}"
-
-            msg = await self.bot.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
-            f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
-            f"React to this message with 🦝 to be queued up for a code. {desc}")
-            await msg.add_reaction('🦝')
-            self.bot.associated_user[msg.id] = ctx.author.id
-            self.bot.associated_message[ctx.author.id] = msg
-
-            self.bot.loop.create_task(self.bot.queue_manager(ctx.author.id))
-        elif res == turnips.Status.PRICE_REQUIRED:
-            await ctx.send("You'll need to tell us how much the turnips are at least.")
-        elif res == turnips.Status.ITS_SUNDAY:
-            logger.warning("Lloid shouldn't be blocking people anymore based on it being Sunday, but it just did.")
-            await ctx.send("I'm afraid the turnip prices aren't set on Sundays, so will you please come again tomorrow instead?")
-        elif res == turnips.Status.CLOSED:
-            logger.warning("This message should no longer be reachable (status = closed)")
+        return self.bot.social_manager.post_listing(ctx.author.id, ctx.author.name, description, price, dodo, tz)
     
     @host.error
     async def host_error(self, ctx, error):
