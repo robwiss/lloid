@@ -117,6 +117,7 @@ class StalkMarket:
         return self.queue.close(owner)
 
     def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
+        print(idx, name, price, dodo, tz, description, chan)
         turnip = self.get(idx, chan)
         if dodo is None:
             if turnip is None or turnip.gmtoffset is None:

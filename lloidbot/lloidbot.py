@@ -13,6 +13,7 @@ import sentry_sdk
 import logging
 import argparse
 import typing
+from functools import wraps, partial
 
 queue = []
 queue_interval_minutes = 10
@@ -72,12 +73,14 @@ class GeneralCommands(commands.Cog):
 # This decorator will interpret what to do after a command, based on the social_manager.Action
 # enum.
 def lloid_command(fn):
+    @wraps(fn)
     async def decorator(*args, **kwargs):
         self = args[0]
         ctx = args[1]
 
-        actions = fn(*args, **kwargs)
+        actions = await fn(*args, **kwargs)
         
+        print(actions)
         for a in actions:
             st, *p = a
             if st == social_manager.Action.ACTION_REJECTED:
@@ -208,7 +211,7 @@ class DMCommands(commands.Cog):
                 await ctx.send("If you want to move to the back of the line, unqueue and requeue. "
                 "If you think the island is congested, please tell the host to pause with the same command you just sent.")
     
-    @commands.command()
+    @commands.command(name='host')
     @lloid_command
     async def host(self, ctx, price: int, dodo, tz: typing.Optional[int], *, description = None):
         # This check can probably be converted into a discord.py command check, but it's only used for one command at the moment.
@@ -216,7 +219,7 @@ class DMCommands(commands.Cog):
             await ctx.send(f"This dodo code appears to be invalid. Please make sure to check the length and characters used.")
             return
 
-        return self.bot.social_manager.post_listing(ctx.author.id, ctx.author.name, description, price, dodo, tz)
+        return self.bot.social_manager.post_listing(ctx.author.id, ctx.author.name, price, description, dodo, tz)
     
     @host.error
     async def host_error(self, ctx, error):
@@ -281,8 +284,8 @@ class Lloid(commands.Bot):
             self.is_paused = {} # owner -> boolean
             self.descriptions = {} # owner -> description
 
-            queue_manager = queue_manager.QueueManager(self.market)
-            self.social_manager = social_manager.SocialManager(self.queue_manager)
+            queuer = queue_manager.QueueManager(self.market)
+            self.social_manager = social_manager.SocialManager(queuer)
 
             deleted = await self.report_channel.purge(check=lambda m: m.author==self.user)
             num_del = len(deleted)
