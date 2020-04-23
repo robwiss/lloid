@@ -61,9 +61,9 @@ class GeneralCommands(commands.Cog):
         else:
             index += 1
             await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you'll get another DM when you reach this position).")
-            if owner in self.bot.requested_pauses and self.bot.requested_pauses[owner] > 0:
-                wait = self.bot.requested_pauses[owner]*queue_interval_minutes
-                await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
+            if owner in self.bot.is_paused and self.bot.is_paused[owner]:
+                wait = (1+self.bot.requested_pauses[owner])*queue_interval_minutes
+                await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
                     "They can cancel this waiting period at any time, so you won't necessarily be waiting that long.")
     
 class DMCommands(commands.Cog):
@@ -128,7 +128,7 @@ class DMCommands(commands.Cog):
         if ctx.author.id in self.bot.market.queue.queues:
             if self.bot.market.has_listing(ctx.author.id):
                 await ctx.send(f"Okay, extending waiting period by another {queue_interval // 60} minutes. "
-                "You can cancel this by letting the next person in with **next**.")
+                "You can cancel this by letting the next person in with **next**.\n")
                 self.bot.is_paused[ctx.author.id] = True
                 if ctx.author.id not in self.bot.requested_pauses:
                     self.bot.requested_pauses[ctx.author.id] = 0
@@ -152,18 +152,27 @@ class DMCommands(commands.Cog):
                 await ctx.send(messages[st])
             elif st == social_manager.Action.ACTION_REJECTED:
                 if len(p) <= 0:
-                    logger.warning(f"The following arguments somehow resulted in a rejection with no reason: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
+                    logger.error(f"The following arguments somehow resulted in a rejection with no reason: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
                     ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
                 elif p[0] in errors:
                     await ctx.send(errors[p[0]])
                 else:
-                    logger.warning(f"The following arguments resulted in a status of {p[0]}: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
+                    logger.error(f"The following arguments resulted in a status of {p[0]}: |{ctx.author.id}, {ctx.author.name}, {description}, {price}, {dodo}, {tz}|")
                     ctx.send("Yeah, you shouldn't be seeing this message. Please tell someone to check the logs.")
 
             if st == social_manager.Action.POST_LISTING:
                 pass
             elif st == social_manager.Action.UPDATE_LISTING:
-                pass
+                owner_id, price, desc, time = p
+                if owner_id in self.bot.associated_message:
+                    msg = self.bot.associated_message[owner_id]
+
+                    await msg.edit(content=
+                        f">>> **{ctx.author.name}** has turnips selling for **{price}**. "
+                        f'Local time: **{time.strftime("%a, %I:%M %p")}**. '
+                        f"React to this message with 🦝 to be queued up for a code. {desc}")
+                else:
+                    logger.error(f"{ctx.author.name} tried to update a listing that doesn't exist anymore.")
             elif st == social_manager.Action.CONFIRM_LISTING_POSTED:
                 pass
 
@@ -177,14 +186,16 @@ class DMCommands(commands.Cog):
             await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
             "You can update the dodo code with the normal syntax. "
             f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
-            "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".")
+            "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".\n"
+            "Also: **Editing is now supported!** Simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
             
             turnip = self.bot.market.get(ctx.author.id)
-            desc = ""
-            if description is not None:
-                self.bot.descriptions[ctx.author.id] = description
-                desc = f"\n**{turnip.name}** adds: {description}"
             
+            desc = ""
+            if description is not None and description.strip() != "":
+                self.bot.descriptions[ctx.author.id] = description
+                desc = f"\n**{ctx.author.name}** adds: {description}"
+
             msg = await self.bot.report_channel.send(f">>> **{turnip.name}** has turnips selling for **{turnip.current_price()}**. "
             f'Local time: **{turnip.current_time().strftime("%a, %I:%M %p")}**. '
             f"React to this message with 🦝 to be queued up for a code. {desc}")
@@ -306,11 +317,10 @@ class Lloid(commands.Bot):
                 await user.send(f"Queued you up for a dodo code for {owner_name}. Estimated time: {interval_s}-{interval_e} minutes, give or take "
                 "(it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). "
                 "If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up.\n\n"
-                "In the meantime, please be aware of common courtesy--once you have the code, it's possible for you to come back in any time you want. "
-                "However, please don't just do so willy-nilly, and instead, **requeue and use the bot as a flow control mechanism, even if you already know the code**. "
-                "Also, a lot of people might be ahead of you, so please just **go in, do the one thing you're there for, and leave**. "
+                "In the meantime, please be aware of common courtesy--**if you leave the island, please requeue if you plan to come back for any reason!** "
+                "Also, a lot of people might be ahead of you, so **go in, do the one thing you're there for, and leave**. "
                 "If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** "
-                "There are reports that exiting via minus button can result in people getting booted without their loot getting saved. Use the airport!")
+                "There are reports that exiting via minus button can result in people getting booted without their loot getting saved, and even save corruption. Use the airport!")
             else:
                 await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
         else:
@@ -347,6 +357,9 @@ class Lloid(commands.Bot):
                 logger.info(f"Sending warning to {next_in_line.name}")
                 await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! "
                 f"Please have your tickets ready, we'll be calling you forward some time in the next 0-{queue_interval_minutes} minutes!")
+                if owner in self.descriptions and self.descriptions is not None and self.descriptions[owner].strip() != "":
+                    desc = self.descriptions[owner]
+                    await next_in_line.send(f"By the way, here's the current description of the island, in case you need a review or in case it's been updated since you last viewed the listing:\n\n{desc}")
         logger.info(f"{self.get_user(task[0]).name} has departed for {task[1].name}'s island")
         self.recently_departed[task[0]] = owner
         try:

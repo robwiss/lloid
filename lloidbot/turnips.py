@@ -217,7 +217,7 @@ class Queue:
             return False
         owner = self.requesters[guest]
 
-        while (guest, owner) in self.queues[owner]:
+        while owner in self.queues and (guest, owner) in self.queues[owner]:
             self.queues[owner].remove( (guest, owner) )
 
         while guest in self.requesters:
