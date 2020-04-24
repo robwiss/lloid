@@ -111,18 +111,49 @@ class Action(enum.Enum): # A list of actions that were taken by the queue manage
     DISPENSING_BLOCKED = 8 # owner, [queued guests]
     DISPENSING_REACTIVATED = 9 # owner, [queued guests]
 
+class Error(enum.Enum):
+    UNKNOWN = 0
+    ALREADY_QUEUED = 1
+
 class Host:
     def __init__(self, owner_id):
         self.id = owner_id
         self.capacity = 1
+        self.queue = [] # Queue of guest objects
         self.visitor_pool = [] # Best guess at who is currently on the island 
+
+    def __eq__(self, h):
+        if isinstance(h, Host):
+            return self.id == h.id
+        else:
+            return self.id == h
+
+    def findQueuedGuest(self, guest_id):
+        if guest_id not in self.queue:
+            return None
+        else:
+            index = self.queue.index(guest_id)
+            return self.queue[index]
+
+    def addToQueue(self, guest_id):
+        if guest_id in self.queue:
+            return Error.ALREADY_QUEUED, self.findQueuedGuest(guest_id)
+        guest = Guest(guest_id, self)
+        self.queue += [guest]
+        return Action.ADDED_TO_QUEUE, guest
 
 class Guest:
     WAITING = "Waiting"
     VISITING = "Visiting"
     DONE = "Done"
 
-    def __init__(self, guest_id, host_id):
+    def __init__(self, guest_id, host):
         self.id = guest_id
-        self.host_id = host_id
+        self.host = host
         self.status = Guest.WAITING
+
+    def __eq__(self, g):
+        if isinstance(g, Guest):
+            return self.id == g.id
+        else:
+            return self.id == g
