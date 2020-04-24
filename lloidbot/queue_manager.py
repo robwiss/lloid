@@ -18,6 +18,8 @@ logger = logging.getLogger('lloid')
 class QueueManager:
     def __init__(self, market):
         self.market = market
+        self.hosts = {} # owner to instance of Host
+        self.guests = {} # guest to instance of Guest
 
     def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
         preexisted = self.market.get(idx) is not None 
@@ -26,6 +28,8 @@ class QueueManager:
             act = Action.LISTING_ACCEPTED
             if preexisted:
                 act = Action.LISTING_UPDATED
+            else:
+                self.hosts[idx] = Host(idx)
             return [(act, self.market.get(idx))]
         elif status in (Status.TIMEZONE_REQUIRED, Status.DODO_REQUIRED):
             return [(Action.NOTHING, status)]
@@ -33,16 +37,17 @@ class QueueManager:
             logger.warning(f"Declaration from user {name} resulted in a status of {status}, which should never even happen")
             return [(Action.UNKNOWN_ERROR, status)]
 
+    # Queue manager should not know about timeouts--that's something for the social manager
+    # to decide. So a timeout would most likely be handled the same way within the queue
+    # manager.
     def visitor_done(self, guest):
-        pass
-
-    def visitor_timeout(self, guest):
         pass
 
     def visitor_request_queue(self, guest, owner):
         status, _ = self.market.request(guest, owner)
         if status:
             guests_ahead = [q[0] for q in self.market.queue.queues[owner][:-1]]
+            self.guests[guest] = Guest(guest, owner)
             return [(Action.ADDED_TO_QUEUE, guests_ahead)]
         else:
             return [(Action.NOTHING,)]
@@ -105,3 +110,19 @@ class Action(enum.Enum): # A list of actions that were taken by the queue manage
     LISTING_CLOSED = 7 # owner, [queued guests]
     DISPENSING_BLOCKED = 8 # owner, [queued guests]
     DISPENSING_REACTIVATED = 9 # owner, [queued guests]
+
+class Host:
+    def __init__(self, owner_id):
+        self.id = owner_id
+        self.capacity = 1
+        self.visitor_pool = [] # Best guess at who is currently on the island 
+
+class Guest:
+    WAITING = "Waiting"
+    VISITING = "Visiting"
+    DONE = "Done"
+
+    def __init__(self, guest_id, host_id):
+        self.id = guest_id
+        self.host_id = host_id
+        self.status = Guest.WAITING

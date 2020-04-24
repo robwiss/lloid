@@ -79,8 +79,7 @@ def lloid_command(fn):
         ctx = args[1]
 
         actions = await fn(*args, **kwargs)
-        
-        print(actions)
+
         for a in actions:
             st, *p = a
             if st == social_manager.Action.ACTION_REJECTED:
@@ -139,6 +138,7 @@ def lloid_command(fn):
 
     return decorator
 
+        
 class DMCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -285,7 +285,7 @@ class Lloid(commands.Bot):
             self.descriptions = {} # owner -> description
 
             queuer = queue_manager.QueueManager(self.market)
-            self.social_manager = social_manager.SocialManager(queuer)
+            self.social_manager = social_manager.TimedSocialManager(self.loop, queuer)
 
             deleted = await self.report_channel.purge(check=lambda m: m.author==self.user)
             num_del = len(deleted)

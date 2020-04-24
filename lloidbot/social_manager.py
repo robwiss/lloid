@@ -2,6 +2,13 @@ from lloidbot.turnips import Status
 from lloidbot import queue_manager
 import logging
 import enum
+from functools import wraps
+import asyncio
+
+queue = []
+queue_interval_minutes = 10
+queue_interval = 60 * queue_interval_minutes
+poll_sleep_interval = 5
 
 logger = logging.getLogger('lloid')
 
@@ -47,7 +54,7 @@ class SocialManager:
     def register_message(self, user_id, message_id):
         pass
 
-    def reaction_added(self, user_id, message_id):
+    def reaction_added(self, user_id, owner_id):
         pass
 
 # These actions are values that will be returned by social manager, and represent
@@ -66,3 +73,29 @@ class Action(enum.Enum):
     CONFIRM_LISTING_UPDATED = 3 # owner id
     UPDATE_LISTING = 4 # owner_id, price, description, turnip.current_time()
     CONFIRM_QUEUED = 5 # guest_id, owner_id
+
+class TimedActions(enum.Enum):
+    CREATE_TIMER = 1 # post-timer callback
+
+class TimedSocialManager(SocialManager):
+    def __init__(self, queueManager):
+        super.__init__(self, queueManager)
+
+        self.guest_timers = {} # guests -> timers
+
+    def guest_loop(self, guest_id, owner_id):
+        pass
+
+    def guest_timed_out(self, guest_id):
+        pass
+
+    def post_listing(self, user_id, name, price, description=None, dodo=None, tz=None, chan=None):
+        super.post_listing(self, user_id, name, price, description, dodo, tz, chan)
+
+    def host_requested_pause(self, owner_id):
+        pass
+
+    def host_requested_next(self, owner_id):
+        pass
+
+

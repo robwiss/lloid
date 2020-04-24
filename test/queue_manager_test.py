@@ -48,6 +48,7 @@ class TestQueueManager(unittest.TestCase):
 
         t = self.market.get(alice.id)
         assert turnip.equals(t), f"{turnip} | {t}"
+        assert alice.id in self.manager.hosts
 
     @freezegun.freeze_time(tuesday_morning)
     def test_declare_new_price_updates_listing(self):
@@ -111,12 +112,18 @@ class TestQueueManager(unittest.TestCase):
         assert action == Action.ADDED_TO_QUEUE
         assert len(ahead) == 0
 
+        assert bella.id in self.manager.guests
+        assert cally.id not in self.manager.guests
+
         res = self.manager.visitor_request_queue(cally.id, alice.id)
         assert len(res) == 1
         action, ahead = res[0]
         assert action == Action.ADDED_TO_QUEUE
         assert len(ahead) == 1
         assert ahead[0] == bella.id
+
+        assert bella.id in self.manager.guests
+        assert cally.id in self.manager.guests
 
     def test_visitor_cannot_double_queue(self):
         self.manager.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
