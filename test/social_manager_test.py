@@ -125,3 +125,24 @@ class TestSocialManager(unittest.TestCase):
 
         expected = (Action.UPDATE_LISTING, alice.id, 250, standard_description, tuesday_morning)
         assert expected in res
+
+    @freezegun.freeze_time(tuesday_morning)
+    def test_queue_for_listing(self):
+        self.manager.post_listing(alice.id, alice.name, 150, standard_description, alice.dodo, alice.gmtoffset, standard_description)
+
+        res = self.manager.reaction_added(1, alice.id)
+        assert len(res) == 1
+        r, guest, host, ahead = res[0]
+        assert r == Action.CONFIRM_QUEUED
+        assert guest == 1
+        assert host == alice.id
+        assert len(ahead) == 0
+
+        res = self.manager.reaction_added(2, alice.id)
+        assert len(res) == 1
+        r, guest, host, ahead = res[0]
+        assert r == Action.CONFIRM_QUEUED
+        assert guest == 2
+        assert host == alice.id
+        assert len(ahead) == 1
+        assert 1 in ahead

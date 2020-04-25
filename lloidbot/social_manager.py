@@ -54,8 +54,13 @@ class SocialManager:
     def register_message(self, user_id, message_id):
         pass
 
-    def reaction_added(self, user_id, owner_id):
-        pass
+    def reaction_added(self, user_id, host_id):
+        out = []
+        res = self.queueManager.visitor_request_queue(user_id, host_id)
+        for action, p in res:
+            if action == queue_manager.Action.ADDED_TO_QUEUE:
+                out += [(Action.CONFIRM_QUEUED, user_id, host_id, p)]
+        return out
 
 # These actions are values that will be returned by social manager, and represent
 # actions that the caller should take upon receiving the result. These actions
@@ -72,7 +77,7 @@ class Action(enum.Enum):
     POST_LISTING = 2 # owner id, price, description, turnip.current_time()
     CONFIRM_LISTING_UPDATED = 3 # owner id
     UPDATE_LISTING = 4 # owner_id, price, description, turnip.current_time()
-    CONFIRM_QUEUED = 5 # guest_id, owner_id
+    CONFIRM_QUEUED = 5 # guest_id, owner_id, queueAhead
 
 class TimedActions(enum.Enum):
     CREATE_TIMER = 1 # post-timer callback
@@ -98,4 +103,8 @@ class TimedSocialManager(SocialManager):
     def host_requested_next(self, owner_id):
         pass
 
+    def reaction_added(self, user_id, host_id):
+        res = super.reaction_added(user_id, host_id)
+
+        return res
 

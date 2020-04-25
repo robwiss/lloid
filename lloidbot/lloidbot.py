@@ -285,7 +285,7 @@ class Lloid(commands.Bot):
             self.descriptions = {} # owner -> description
 
             queuer = queue_manager.QueueManager(self.market)
-            self.social_manager = social_manager.TimedSocialManager(self.loop, queuer)
+            self.social_manager = social_manager.TimedSocialManager(queuer)
 
             deleted = await self.report_channel.purge(check=lambda m: m.author==self.user)
             num_del = len(deleted)
