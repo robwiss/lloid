@@ -45,12 +45,12 @@ class QueueManager:
 
     def visitor_request_queue(self, guest, owner):
         status, _ = self.market.request(guest, owner)
-        if status:
+        if status == Status.SUCCESS:
             guests_ahead = [q[0] for q in self.market.queue.queues[owner][:-1]]
             self.guests[guest] = Guest(guest, owner)
             return [(Action.ADDED_TO_QUEUE, guests_ahead)]
         else:
-            return [(Action.NOTHING,)]
+            return [(Action.NOTHING, status)]
 
     def visitor_request_dequeue(self, guest, owner):
         pass

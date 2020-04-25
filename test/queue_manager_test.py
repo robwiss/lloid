@@ -137,8 +137,9 @@ class TestQueueManager(unittest.TestCase):
 
         res = self.manager.visitor_request_queue(cally.id, bella.id)
         assert len(res) == 1
-        action = res[0][0]
+        action, status = res[0]
         assert action == Action.NOTHING
+        assert status == turnips.Status.ALREADY_QUEUED
 
 
 if __name__ == '__main__':

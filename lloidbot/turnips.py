@@ -103,9 +103,9 @@ class StalkMarket:
 
     def request(self, requester, owner):
         r = self.queue.request(requester, owner)
-        if not r:
-            return False, None
-        return True, len(self.queue.queues[owner])
+        if r != Status.SUCCESS:
+            return r, None
+        return r, len(self.queue.queues[owner])
 
     def forfeit(self, requester):
         return self.queue.forfeit(requester)
@@ -187,6 +187,8 @@ class Status(enum.Enum):
     ALREADY_CLOSED = 6
     ALREADY_OPEN = 7
     QUEUE_EMPTY = 8
+    ALREADY_QUEUED = 9
+    NO_SUCH_QUEUE  = 10
 
 class Queue:
     def __init__(self, market):
@@ -204,14 +206,14 @@ class Queue:
 
     def request(self, guest, owner):
         if guest in self.requesters:
-            return False
+            return Status.ALREADY_QUEUED
         self.requesters[guest] = owner
         
         if owner not in self.queues:
-            return False
+            return Status.NO_SUCH_QUEUE
         self.queues[owner] += [(guest, owner)]
 
-        return True
+        return Status.SUCCESS
 
     def forfeit(self, guest):
         if guest not in self.requesters:
