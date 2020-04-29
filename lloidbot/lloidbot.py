@@ -44,7 +44,12 @@ class GeneralCommands(commands.Cog):
             await ctx.send("You don't seem to be queued up for anything.")
         else:
             index += 1
-            await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. Position 1 means you're next (you'll get another DM when you reach this position).")
+
+            addendum = "Position 1 means you're next, and will be receiving a DM to notify you to get ready. Please note that if the host lets multiple people in at once, you may get the warning notification and the code at the same time."
+            if index == 1:
+                addendum = f"This means you're in front of the line and will be called in as soon as someone leaves or the host lets you in manually, which could be anywhere from 0-{queue_interval_minutes} minutes at most."
+
+            await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. {addendum}")
             if owner in self.bot.is_paused and self.bot.is_paused[owner]:
                 wait = (1+self.bot.requested_pauses[owner])*queue_interval_minutes
                 await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
@@ -135,7 +140,7 @@ class DMCommands(commands.Cog):
             if description is not None and description.strip() != "":
                 self.bot.descriptions[ctx.author.id] = description
                 desc = f"\n**{ctx.author.name}** adds: {description}"
-            await ctx.send("Updated your info. Anyone still in line will get the updated codes.")
+            await ctx.send("Updated your info. Anyone still in line will get the updated codes, but if anyone got your old code while you were busy creating a new one, they'll need to reach out to you privately.")
  
             if ctx.author.id in self.bot.associated_message:
                 msg = self.bot.associated_message[ctx.author.id]
@@ -151,9 +156,9 @@ class DMCommands(commands.Cog):
             self.bot.requested_pauses[ctx.author.id] = 0
             await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
             "You can update the dodo code with the normal syntax. "
-            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
+            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. This stacks, so if you want me to wait {queue_interval // 30} minutes, just message me pause twice, and so on."
             "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".\n"
-            "Also: **Editing is now supported!** Simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
+            "To edit the listing, simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
             
             turnip = self.bot.market.get(ctx.author.id)
             
@@ -189,11 +194,17 @@ class DMCommands(commands.Cog):
     async def host_error(self, ctx, error):
         logger.info(f"Invalid command received: {ctx.message.content}")
         logger.info(error)
-        await ctx.send("** If you've used this bot before, note that the syntax has changed slightly.**")
-        await ctx.send("Usage: \"host [price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
-                "The quotes (\") and square brackets ([]) are **not** part of the input!\n\n"
-                "Example usage: `host 123 C0FEE 8 Brewster is in town selling infinite durability axes`\n\n "
-                "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you are opening for reasons other than turnips.")
+        await ctx.send("""
+**Example usage:** 
+`host 150 WUH0H 8 Brewster is in town selling infinite durability axes`
+
+Explanation:
+`host` tells it you're hosting an island.
+`150` is your turnip price. If you're hosting for other reasons (Saharah, etc), feel free to put a placeholder.
+`WUH0H` is your Dodo Code.
+`8` is your time zone/GMT offset--this helps to inform people what time it is in your island, but if you don't know your GMT offset, Lloid will still work properly if you just make something up; it will just report the wrong local time.
+`Brewster is in town selling infinite durability axes` is a description you want to attach. You aren't required to provide one.
+            """)
 
 class Lloid(commands.Bot):
     Successful = 0
@@ -224,11 +235,17 @@ class Lloid(commands.Bot):
         ):
             logger.debug("Invalid command, error:")
             logger.debug(error)
-            await ctx.send("** If you've used this bot before, note that the syntax has changed slightly.**")
-            await ctx.send("Usage: \"host [price] [optional dodo code] [optional gmt offset--an integer such as -5 or 8] [optional description, markdown supported]\"\n\n "
-                    "The quotes (\") and square brackets ([]) are **not** part of the input!\n\n"
-                    "Example usage: `host 123 C0FEE 8 Brewster is in town selling infinite durability axes`\n\n "
-                    "All arguments are required if you wish to include a description, but feel free to put a placeholder price like 1 if you are opening for reasons other than turnips.")
+            await ctx.send("""
+**Example usage:** 
+`host 150 WUH0H 8 Brewster is in town selling infinite durability axes`
+
+Explanation:
+`host` tells it you're hosting an island.
+`150` is your turnip price. If you're hosting for other reasons (Saharah, etc), feel free to put a placeholder.
+`WUH0H` is your Dodo Code.
+`8` is your time zone/GMT offset--this helps to inform people what time it is in your island, but if you don't know your GMT offset, Lloid will still work properly if you just make something up; it will just report the wrong local time.
+`Brewster is in town selling infinite durability axes` is a description you want to attach. You aren't required to provide one.
+                """)
             return
 
     async def on_ready(self):
@@ -291,8 +308,9 @@ class Lloid(commands.Bot):
                 interval_s = queue_interval * (size - 1) // 60
                 interval_e = queue_interval * size // 60
                 await user.send(f"Queued you up for a dodo code for {owner_name}. Estimated time: {interval_s}-{interval_e} minutes, give or take "
-                "(it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). "
+                f"(it waits {queue_interval_minutes} minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). "
                 "If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up.\n\n"
+                "⚠️*ETIQUETTE - PLEASE READ*⚠️\n\n"
                 "In the meantime, please be aware of common courtesy--**if you leave the island, please requeue if you plan to come back for any reason!** "
                 "Also, a lot of people might be ahead of you, so **go in, do the one thing you're there for, and leave**. "
                 "If you're there to sell turnips, don't look for Saharah or shop at Nook's! And please, **DO NOT USE the minus (-) button to exit!** "
@@ -316,7 +334,7 @@ class Lloid(commands.Bot):
             return Lloid.AlreadyClosed
 
         logger.info(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
-        msg = await self.get_user(task[0]).send(f"Hope you enjoy your trip to **{task[1].name}**'s island! "
+        msg = await self.get_user(task[0]).send(f"⭐⭐⭐\nHope you enjoy your trip to **{task[1].name}**'s island! "
         "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left "
         "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in."
         f"The Dodo code is **{task[1].dodo}**.")
@@ -331,7 +349,7 @@ class Lloid(commands.Bot):
             next_in_line = self.get_user(q[0][0])
             if next_in_line is not None:
                 logger.info(f"Sending warning to {next_in_line.name}")
-                await next_in_line.send(f"Your flight to **{task[1].name}**'s island is boarding soon! "
+                await next_in_line.send(f"⚠️⚠️⚠️\nYour flight to **{task[1].name}**'s island is boarding soon! "
                 f"Please have your tickets ready, we'll be calling you forward some time in the next 0-{queue_interval_minutes} minutes!")
                 if owner in self.descriptions and self.descriptions is not None and self.descriptions[owner].strip() != "":
                     desc = self.descriptions[owner]
