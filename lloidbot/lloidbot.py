@@ -49,7 +49,7 @@ class GeneralCommands(commands.Cog):
             if index == 1:
                 addendum = f"This means you're in front of the line and will be called in as soon as someone leaves or the host lets you in manually, which could be anywhere from 0-{queue_interval_minutes} minutes at most."
 
-            await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. {addendum}")
+            await ctx.send(f"Your position in the queue is {index} in a queue of {qsize} people. {addendum}\n")
             if owner in self.bot.is_paused and self.bot.is_paused[owner]:
                 wait = (1+self.bot.requested_pauses[owner])*queue_interval_minutes
                 await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
@@ -155,8 +155,8 @@ class DMCommands(commands.Cog):
                 self.bot.sleepers[ctx.author.id].cancel()
             self.bot.requested_pauses[ctx.author.id] = 0
             await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
-            "You can update the dodo code with the normal syntax. "
-            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. This stacks, so if you want me to wait {queue_interval // 30} minutes, just message me pause twice, and so on."
+            "You can update the dodo code with the normal syntax. \n\n"
+            f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. This stacks, so if you want me to wait {queue_interval // 30} minutes, just message me pause twice, and so on.\n\n"
             "You can also let the next person in and reset the timer to normal by messaging me \"**next**\".\n"
             "To edit the listing, simply send the same command with the updated info. If all you're changing is your dodo code, `host price xdodo` will suffice. Nobody will have to requeue to receive updated codes, but they'll have to reach out to you if you changed your code after they received an old one.")
             
@@ -334,9 +334,9 @@ Explanation:
             return Lloid.AlreadyClosed
 
         logger.info(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
-        msg = await self.get_user(task[0]).send(f"⭐⭐⭐\nHope you enjoy your trip to **{task[1].name}**'s island! "
+        msg = await self.get_user(task[0]).send(f"⭐⭐⭐ **NOW BOARDING** ⭐⭐⭐\n\nHope you enjoy your trip to **{task[1].name}**'s island! "
         "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left "
-        "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in."
+        "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in. "
         f"The Dodo code is **{task[1].dodo}**.")
         if msg is None:
             logger.error("Failed to let them in!")
