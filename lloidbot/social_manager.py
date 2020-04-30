@@ -80,7 +80,8 @@ class Action(enum.Enum):
     CONFIRM_QUEUED = 5 # guest_id, owner_id, queueAhead
 
 class TimedActions(enum.Enum):
-    CREATE_TIMER = 1 # post-timer callback
+    CREATE_TIMER = 1 # key, length_seconds, post-timer callback
+    CANCEL_TIMER = 2 # key
 
 class TimedSocialManager(SocialManager):
     def __init__(self, queueManager):

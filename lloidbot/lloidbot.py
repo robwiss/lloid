@@ -103,10 +103,6 @@ def lloid_command(fn):
 
             if st == social_manager.Action.POST_LISTING:
                 owner_id, price, description, time = p
-                if ctx.author.id in self.bot.sleepers:
-                    logger.info("Owner has previous outstanding timers. Cancelling them now.")
-                    self.bot.sleepers[ctx.author.id].cancel()
-                self.bot.requested_pauses[ctx.author.id] = 0
                 await ctx.send("Okay! Please be responsible and message \"**close**\" to indicate when you've closed. "
                 "You can update the dodo code with the normal syntax. "
                 f"Messaging me \"**pause**\" will extend the cooldown timer by {queue_interval // 60} minutes each time. "
@@ -126,8 +122,6 @@ def lloid_command(fn):
                 await msg.add_reaction('🦝')
                 self.bot.associated_user[msg.id] = ctx.author.id
                 self.bot.associated_message[ctx.author.id] = msg
-
-                self.bot.loop.create_task(self.bot.queue_manager(ctx.author.id))
             elif st == social_manager.Action.UPDATE_LISTING:
                 owner_id, price, desc, time = p
                 if owner_id in self.bot.associated_message:
@@ -330,23 +324,24 @@ class Lloid(commands.Bot):
                 await user.send("Removed you from the queue for %s." % owner_name)
 
     async def queue_user(self, message_id, user):
-        if message_id in self.associated_user:
-            status, size = self.market.request(user.id, self.associated_user[message_id])
-            if status:
-                owner_name = self.get_user(self.associated_user[message_id]).name
-                logger.info(f"queued {user.name} up for {owner_name}")
+        pass
+        # if message_id in self.associated_user:
+        #     status, size = self.market.request(user.id, self.associated_user[message_id])
+        #     if status:
+        #         owner_name = self.get_user(self.associated_user[message_id]).name
+        #         logger.info(f"queued {user.name} up for {owner_name}")
 
-                if size == 0:
-                    size = 1
-                interval_s = queue_interval * (size - 1) // 60
-                interval_e = queue_interval * size // 60
+        #         if size == 0:
+        #             size = 1
+        #         interval_s = queue_interval * (size - 1) // 60
+        #         interval_e = queue_interval * size // 60
 
-                await user.send(messages[].format(**locals()))
-            else:
-                await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
-        else:
-            k = self.associated_user.keys
-            logger.info(f"{message_id} was not found in {k}")
+        #         await user.send(messages[].format(**locals()))
+        #     else:
+        #         await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
+        # else:
+        #     k = self.associated_user.keys
+        #     logger.info(f"{message_id} was not found in {k}")
 
     async def on_disconnect(self):
         logger.warning("Lloid got disconnected.")
