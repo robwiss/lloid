@@ -40,3 +40,25 @@ class HostGuestTest(unittest.TestCase):
         assert h.addToQueue(1) == (Action.ADDED_TO_QUEUE, Guest(1,h))
         assert h.addToQueue(1) == (Error.ALREADY_QUEUED, Guest(1,h))
 
+    def test_pop_from_host_queue(self):
+        h = Host(1)
+        assert h.addToQueue(1) == (Action.ADDED_TO_QUEUE, Guest(1,h))
+        assert h.addToQueue(2) == (Action.ADDED_TO_QUEUE, Guest(2,h))
+
+        assert len(h.visitor_pool) == 0
+
+        guest, e = h.pop()
+        assert guest == Guest(1, h)
+        assert e is None
+        assert len(h.visitor_pool) == 1
+
+        guest, e = h.pop()
+        assert guest == Guest(2, h)
+        assert e is None
+        assert len(h.visitor_pool) == 2
+
+        guest, e = h.pop()
+        assert guest is None
+        assert e is Error.QUEUE_EMPTY
+        assert len(h.visitor_pool) == 2
+

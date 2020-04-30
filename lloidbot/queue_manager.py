@@ -114,6 +114,7 @@ class Action(enum.Enum): # A list of actions that were taken by the queue manage
 class Error(enum.Enum):
     UNKNOWN = 0
     ALREADY_QUEUED = 1
+    QUEUE_EMPTY = 2
 
 class Host:
     def __init__(self, owner_id):
@@ -141,6 +142,13 @@ class Host:
         guest = Guest(guest_id, self)
         self.queue += [guest]
         return Action.ADDED_TO_QUEUE, guest
+
+    def pop(self):
+        if len(self.queue) <= 0:
+            return None, Error.QUEUE_EMPTY
+        v = self.queue.pop(0)
+        self.visitor_pool += [v]
+        return v, None
 
 class Guest:
     WAITING = "Waiting"
