@@ -44,10 +44,15 @@ class QueueManager:
         pass
 
     def visitor_request_queue(self, guest, owner):
-        status, _ = self.market.request(guest, owner)
-        if status == Status.SUCCESS:
-            guests_ahead = [q[0] for q in self.market.queue.queues[owner][:-1]]
-            self.guests[guest] = Guest(guest, owner)
+        if guest in self.guests and self.guests[guest].status == Guest.WAITING:
+            return [(Action.NOTHING, Error.ALREADY_QUEUED)]
+        if owner not in self.hosts:
+            return [(Action.NOTHING, Error.NO_SUCH_QUEUE)]
+
+        guests_ahead = self.hosts[owner].queue[:]
+        status, guest = self.hosts[owner].addToQueue(guest)
+        if status == Action.ADDED_TO_QUEUE:
+            self.guests[guest.id] = Guest(guest, owner)
             return [(Action.ADDED_TO_QUEUE, guests_ahead)]
         else:
             return [(Action.NOTHING, status)]
@@ -58,8 +63,13 @@ class QueueManager:
     def host_pause(self):
         pass
 
-    def host_next(self):
-        pass
+    def host_next(self, owner):
+        if owner not in self.hosts:
+            return [(Action.NOTHING, Error.NO_SUCH_QUEUE)]
+        guest, e = self.hosts[owner].pop()
+        if e == Error.QUEUE_EMPTY:
+            return [(Action.NOTHING, Error.QUEUE_EMPTY)]
+        return [(Action.POPPED_FROM_QUEUE, guest, owner)]
     
 class Map1to1:
     def __init__(self):
@@ -110,11 +120,13 @@ class Action(enum.Enum): # A list of actions that were taken by the queue manage
     LISTING_CLOSED = 7 # owner, [queued guests]
     DISPENSING_BLOCKED = 8 # owner, [queued guests]
     DISPENSING_REACTIVATED = 9 # owner, [queued guests]
+    POPPED_FROM_QUEUE = 10 # guest id, owner id -- this differs from REMOVED as the latter implies that it's an abnormal situation (eg: visitor leaving line or getting kicked)
 
 class Error(enum.Enum):
     UNKNOWN = 0
     ALREADY_QUEUED = 1
     QUEUE_EMPTY = 2
+    NO_SUCH_QUEUE = 3
 
 class Host:
     def __init__(self, owner_id):
@@ -148,6 +160,7 @@ class Host:
             return None, Error.QUEUE_EMPTY
         v = self.queue.pop(0)
         self.visitor_pool += [v]
+        v.status = Guest.VISITING
         return v, None
 
 class Guest:

@@ -49,11 +49,13 @@ class HostGuestTest(unittest.TestCase):
 
         guest, e = h.pop()
         assert guest == Guest(1, h)
+        assert guest.status == Guest.VISITING
         assert e is None
         assert len(h.visitor_pool) == 1
 
         guest, e = h.pop()
         assert guest == Guest(2, h)
+        assert guest.status == Guest.VISITING
         assert e is None
         assert len(h.visitor_pool) == 2
 

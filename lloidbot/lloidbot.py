@@ -44,7 +44,9 @@ errors = {
         "both a dodo code and a GMT offset (just a positive or negative integer). "
         "The price can be a placeholder if you want.",
     queue_manager.Status.PRICE_REQUIRED:
-        "You'll need to tell us how much the turnips are at least."
+        "You'll need to tell us how much the turnips are at least.",
+    queue_manager.Error.ALREADY_QUEUED:
+        "You seem to already be in line somewhere."
 }
 
 class GeneralCommands(commands.Cog):

@@ -1,7 +1,7 @@
 import unittest
 import sqlite3
 from lloidbot import turnips
-from lloidbot.queue_manager import QueueManager, Action
+from lloidbot.queue_manager import QueueManager, Action, Error
 from datetime import datetime
 import freezegun
 
@@ -139,7 +139,66 @@ class TestQueueManager(unittest.TestCase):
         assert len(res) == 1
         action, status = res[0]
         assert action == Action.NOTHING
-        assert status == turnips.Status.ALREADY_QUEUED
+        assert status == Error.ALREADY_QUEUED, status
+
+    def test_pop_from_queue(self):
+        self.manager.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+
+        res = self.manager.host_next(alice.id)
+        assert len(res[0]) == 2
+        r, e = res[0]
+        assert r == Action.NOTHING
+        assert e == Error.QUEUE_EMPTY
+
+        self.manager.visitor_request_queue(bella.id, alice.id)
+        self.manager.visitor_request_queue(cally.id, alice.id)
+
+        res = self.manager.host_next(alice.id)
+        assert len(res[0]) == 3, res
+        r, g, o = res[0]
+        assert r == Action.POPPED_FROM_QUEUE
+        assert g == bella.id
+        assert o == alice.id
+
+        self.manager.visitor_request_queue(deena.id, alice.id)[0]
+
+        res = self.manager.host_next(alice.id)
+        assert len(res[0]) == 3
+        r, g, o = res[0]
+        assert r == Action.POPPED_FROM_QUEUE
+        assert g == cally.id
+        assert o == alice.id
+
+        res = self.manager.host_next(alice.id)
+        assert len(res[0]) == 3
+        r, g, o = res[0]
+        assert r == Action.POPPED_FROM_QUEUE
+        assert g == deena.id
+        assert o == alice.id
+
+        res = self.manager.host_next(alice.id)
+        assert len(res[0]) == 2
+        r, e = res[0]
+        assert r == Action.NOTHING
+        assert e == Error.QUEUE_EMPTY
+
+    def test_pop_from_nonexistent_queue(self):
+        self.manager.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+
+        res = self.manager.host_next(bella.id)
+        assert len(res[0]) == 2
+        r, e = res[0]
+        assert r == Action.NOTHING
+        assert e == Error.NO_SUCH_QUEUE, e
+
+    def test_visitor_queues_for_nonexistent_host(self):
+        self.manager.declare(alice.id, alice.name, 150, alice.dodo, alice.gmtoffset)
+
+        res = self.manager.visitor_request_queue(1, bella.id)
+        assert len(res[0]) == 2
+        r, e = res[0]
+        assert r == Action.NOTHING
+        assert e == Error.NO_SUCH_QUEUE, e
 
 
 if __name__ == '__main__':
