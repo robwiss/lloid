@@ -85,7 +85,7 @@ class TimedActions(enum.Enum):
 
 class TimedSocialManager(SocialManager):
     def __init__(self, queueManager):
-        super.__init__(self, queueManager)
+        SocialManager.__init__(self, queueManager)
 
         self.guest_timers = {} # guests -> timers
 
@@ -96,7 +96,9 @@ class TimedSocialManager(SocialManager):
         pass
 
     def post_listing(self, user_id, name, price, description=None, dodo=None, tz=None, chan=None):
-        super.post_listing(self, user_id, name, price, description, dodo, tz, chan)
+        res = super().post_listing(user_id, name, price, description, dodo, tz, chan)
+
+        return res
 
     def host_requested_pause(self, owner_id):
         pass
