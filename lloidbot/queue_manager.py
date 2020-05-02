@@ -22,7 +22,7 @@ class QueueManager:
         self.guests = {} # guest to instance of Guest
 
     def declare(self, idx, name, price, dodo=None, tz=None, description=None, chan=None):
-        preexisted = self.market.get(idx) is not None 
+        preexisted = idx in self.hosts 
         status = self.market.declare(idx, name, price, dodo, tz, description, chan)
         if status in (Status.SUCCESS, Status.ALREADY_OPEN):
             act = Action.LISTING_ACCEPTED
