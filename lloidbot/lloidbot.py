@@ -79,6 +79,57 @@ class GeneralCommands(commands.Cog):
                 await ctx.send(f"Just so you know, the host asked me to hold off on giving out codes for roughly another {wait} minutes or so, so don't be surprised if your queue number doesn't change for a while. "
                     "They can cancel this waiting period at any time, so you won't necessarily be waiting that long.")
 
+# This decorator denotes that the decorated method returns a list of 
+# messages, in the form [(channel, key, *params, *on_sent, *on_fail)]. 
+# The channel is any object that contains an async send(str) method, 
+# which will be used to send the message. The key corresponds to a message
+# that is defined in either the global `message` dict or the global `errors`
+# dict, in that order of priority.
+# The optional params argument is a dict of the keywords that are required 
+# to format the message. 
+# The optional on_sent argument is a callback that is executed upon success
+# of the message sending. It passes the Discord message object, as well as
+# the message tuple that was just processed.
+# The optional on_fail argument is a callback that is executed when an exception
+# occurs during message sending--for instance, if the channel blocks messages.
+# It passes the error as well as the message tuple that errored out.
+# All messages in the list are guaranteed to be processed by Lloid in order,
+# although variable issues such as users' internet speeds and Discord's backend
+# mean that messages sent at around the same time may not be received in order.
+def sends_messages(fn):
+    @wraps(fn)
+    async def decorator(*args, **kwargs):
+        messages_to_send = await fn(*args, **kwargs)
+
+        for message in messages_to_send:
+            channel, message_key = message[:2]
+            message_params = None
+            on_sent = None
+            on_fail = None
+            if len(message) > 2:
+                message_params = message[2]
+            if len(message) > 3:
+                on_sent = message[3]
+            if len(message) > 4:
+                on_fail = message[4]
+
+            try:
+                msg = None
+                if message_key in messages:
+                    msg = await channel.send(messages[message_key].format(**message_params))
+                elif message_key in errors: 
+                    msg = await channel.send(errors[message_key].format(**message_params))
+                else:
+                    logger.warning(f"Tried to send message, but key was not found: {message_key}")
+                if on_sent is not None:
+                    on_sent(msg, message)
+            except Exception as err:
+                if on_fail is not None:
+                    on_fail(err, message)
+        return messages_to_send
+
+    return decorator
+
 # This should be used after a @commands.command statement
 # This decorator will interpret what to do after a command, based on the social_manager.Action
 # enum.
@@ -320,6 +371,7 @@ class Lloid(commands.Bot):
                 self.market.forfeit(user.id)
                 await message.remove_reaction('🦝', user)
 
+    @sends_messages
     async def confirm_queued(self, guest, host, ahead):
         owner_name = self.get_user(host).name
         worst_case = queue_interval_minutes
@@ -327,7 +379,8 @@ class Lloid(commands.Bot):
         interval_s = best_case*len(ahead)
         interval_e = worst_case*(len(ahead)+1)
         queue_interval = queue_interval_minutes
-        await self.get_user(guest).send(messages[social_manager.Action.CONFIRM_QUEUED].format(**locals()))
+
+        return [(self.get_user(guest), social_manager.Action.CONFIRM_QUEUED, locals())]
 
     async def on_raw_reaction_remove(self, payload):
         if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
