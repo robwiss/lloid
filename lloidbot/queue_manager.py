@@ -133,7 +133,7 @@ class Host:
         self.id = owner_id
         self.capacity = 1
         self.queue = [] # Queue of guest objects
-        self.visitor_pool = [] # Best guess at who is currently on the island 
+        self.outgoing_queue = [] # Best guess at who is currently on the island 
 
     def __eq__(self, h):
         if isinstance(h, Host):
@@ -159,7 +159,7 @@ class Host:
         if len(self.queue) <= 0:
             return None, Error.QUEUE_EMPTY
         v = self.queue.pop(0)
-        self.visitor_pool += [v]
+        self.outgoing_queue += [v]
         v.status = Guest.VISITING
         return v, None
 

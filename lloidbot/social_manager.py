@@ -107,7 +107,7 @@ class TimedSocialManager(SocialManager):
         pass
 
     def reaction_added(self, user_id, host_id):
-        res = super.reaction_added(user_id, host_id)
+        res = super().reaction_added(user_id, host_id)
 
         return res
 

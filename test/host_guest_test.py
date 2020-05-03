@@ -45,22 +45,22 @@ class HostGuestTest(unittest.TestCase):
         assert h.addToQueue(1) == (Action.ADDED_TO_QUEUE, Guest(1,h))
         assert h.addToQueue(2) == (Action.ADDED_TO_QUEUE, Guest(2,h))
 
-        assert len(h.visitor_pool) == 0
+        assert len(h.outgoing_queue) == 0
 
         guest, e = h.pop()
         assert guest == Guest(1, h)
         assert guest.status == Guest.VISITING
         assert e is None
-        assert len(h.visitor_pool) == 1
+        assert len(h.outgoing_queue) == 1
 
         guest, e = h.pop()
         assert guest == Guest(2, h)
         assert guest.status == Guest.VISITING
         assert e is None
-        assert len(h.visitor_pool) == 2
+        assert len(h.outgoing_queue) == 2
 
         guest, e = h.pop()
         assert guest is None
         assert e is Error.QUEUE_EMPTY
-        assert len(h.visitor_pool) == 2
+        assert len(h.outgoing_queue) == 2
 

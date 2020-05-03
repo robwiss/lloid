@@ -25,8 +25,8 @@ messages = {
     social_manager.Action.CONFIRM_LISTING_UPDATED: 
         "Updated your info. Anyone still in line will get the updated codes.",
     social_manager.Action.CONFIRM_QUEUED:
-        "Queued you up for a dodo code for {owner_name}. Estimated time: {interval_s}-{interval_e} minutes, give or take "
-        "(it waits 10 minutes for each person before letting someone in, but the people ahead of you may finish early and let you in earlier). "
+        "Queued you up for a dodo code for {owner_name}. Estimated time: Anywhere between {interval_s}-{interval_e} minutes. "
+        "This is affected by several factors, but barring the host explicitly pausing, each person will be waiting at most {queue_interval} minutes. "
         "If you want to queue up elsewhere, or if you have to go, just unreact and it'll free you up.\n\n"
         "In the meantime, please be aware of common courtesy--**if you leave the island, please requeue if you plan to come back for any reason!** "
         "Also, a lot of people might be ahead of you, so **go in, do the one thing you're there for, and leave**. "
@@ -140,8 +140,8 @@ def lloid_command(fn):
             elif st == social_manager.Action.CONFIRM_LISTING_POSTED:
                 pass
             elif st == social_manager.Action.CONFIRM_QUEUED:
-                guest, host, ahead = p
                 pass
+
 
     return decorator
 
@@ -303,6 +303,7 @@ class Lloid(commands.Bot):
         channel = await self.fetch_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         user = await self.fetch_user(payload.user_id)
+        host_user = await self.fetch_user(self.associated_user[payload.message_id])
 
         if user == self.user or message.author != self.user:
             return
@@ -310,11 +311,23 @@ class Lloid(commands.Bot):
         if payload.emoji.name == '🦝':
             logger.debug(f"{user.name} reacted with raccoon")
             try:
-                await self.queue_user(payload.message_id, user)
+                res = self.social_manager.reaction_added(payload.user_id, host_user.id)
+                if len(res) > 0 and res[0][0] == social_manager.Action.CONFIRM_QUEUED:
+                    guest, host, ahead = res[0][1:]
+                    await self.confirm_queued(guest, host, ahead)
             except:
                 logger.warning(f"User {user.name} tried to queue up, but isn't allowing DMs.")
                 self.market.forfeit(user.id)
                 await message.remove_reaction('🦝', user)
+
+    async def confirm_queued(self, guest, host, ahead):
+        owner_name = self.get_user(host).name
+        worst_case = queue_interval_minutes
+        best_case = worst_case//2
+        interval_s = best_case*len(ahead)
+        interval_e = worst_case*(len(ahead)+1)
+        queue_interval = queue_interval_minutes
+        await self.get_user(guest).send(messages[social_manager.Action.CONFIRM_QUEUED].format(**locals()))
 
     async def on_raw_reaction_remove(self, payload):
         if payload.emoji.name == '🦝' and payload.message_id in self.associated_user and payload.user_id in self.market.queue.requesters:
@@ -325,25 +338,9 @@ class Lloid(commands.Bot):
             if waiting_for == self.associated_user[payload.message_id] and self.market.forfeit(payload.user_id):
                 await user.send("Removed you from the queue for %s." % owner_name)
 
+    @lloid_command
     async def queue_user(self, message_id, user):
-        pass
-        # if message_id in self.associated_user:
-        #     status, size = self.market.request(user.id, self.associated_user[message_id])
-        #     if status:
-        #         owner_name = self.get_user(self.associated_user[message_id]).name
-        #         logger.info(f"queued {user.name} up for {owner_name}")
-
-        #         if size == 0:
-        #             size = 1
-        #         interval_s = queue_interval * (size - 1) // 60
-        #         interval_e = queue_interval * size // 60
-
-        #         await user.send(messages[].format(**locals()))
-        #     else:
-        #         await user.send("It sounds like either the market is now closed, or you're in line elsewhere at the moment.")
-        # else:
-        #     k = self.associated_user.keys
-        #     logger.info(f"{message_id} was not found in {k}")
+        return 
 
     async def on_disconnect(self):
         logger.warning("Lloid got disconnected.")
