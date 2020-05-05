@@ -334,10 +334,25 @@ Explanation:
             return Lloid.AlreadyClosed
 
         logger.info(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
-        msg = await self.get_user(task[0]).send(f"⭐⭐⭐ **NOW BOARDING** ⭐⭐⭐\n\nHope you enjoy your trip to **{task[1].name}**'s island! "
-        "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left "
-        "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in. "
-        f"The Dodo code is **{task[1].dodo}**.")
+        sent = False
+        exCount = 0
+        while not sent and exCount < 5:
+            msg = None
+            try:
+                msg = await self.get_user(task[0]).send(f"⭐⭐⭐ **NOW BOARDING** ⭐⭐⭐\n\nHope you enjoy your trip to **{task[1].name}**'s island! "
+                "Be polite, observe social distancing, leave a tip if you can, and **please be responsible and message me \"__done__\" when you've left "
+                "(unless the island already has a lot of visitors inside, in which case... don't bother)**. Doing this lets the next visitor in. "
+                f"The Dodo code is **{task[1].dodo}**.")
+                sent = True
+            except discord.Forbidden:
+                guest = self.get_user(task[0]).name
+                logger.warning(f"Guest {guest} doesn't seem to be allowing DMs. Skipping them.")
+                sent = True
+            except discord.HTTPException as httpEx:
+                guest = self.get_user(task[0]).name
+                owner = task[1].name
+                exCount += 1
+                logger.warning(f"Failed to send a code for {owner}'s island to {guest}. Trying again. Error was {httpEx}")
         if msg is None:
             logger.error("Failed to let them in!")
         else:
