@@ -336,7 +336,7 @@ Explanation:
         logger.info(f"Letting {self.get_user(task[0]).name} in to {task[1].name}")
         sent = False
         exCount = 0
-        while not sent and exCount < 5:
+        while not sent and exCount < 3:
             msg = None
             try:
                 msg = await self.get_user(task[0]).send(f"⭐⭐⭐ **NOW BOARDING** ⭐⭐⭐\n\nHope you enjoy your trip to **{task[1].name}**'s island! "
@@ -352,7 +352,8 @@ Explanation:
                 guest = self.get_user(task[0]).name
                 owner = task[1].name
                 exCount += 1
-                logger.warning(f"Failed to send a code for {owner}'s island to {guest}. Trying again. Error was {httpEx}")
+                logger.warning(f"Failed to send a code for {owner}'s island to {guest}. Trying again after 1 minute. Error was {httpEx}")
+                await asyncio.sleep(60)
         if msg is None:
             logger.error("Failed to let them in!")
         else:
