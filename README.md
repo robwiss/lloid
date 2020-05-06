@@ -17,7 +17,7 @@ Running:
 5. Run `python -m lloidbot`
 
 Testing:
-Run `python -m unittest`.
+Run `pytest`
 
 Tweaking:
 I haven't made this thing highly configurable but you can change the queue delay time by changing the env variable `QUEUE_INTERVAL` to the number of seconds you want.
